@@ -1,0 +1,97 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Popcorn App - Redis Cache Setup'
+
+Resources:
+  PopcornVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: popcorn-vpc
+
+  PopcornInternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: popcorn-igw
+
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref PopcornVPC
+      InternetGatewayId: !Ref PopcornInternetGateway
+
+  PopcornRedisSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref PopcornVPC
+      CidrBlock: 10.0.1.0/24
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: popcorn-redis-subnet
+
+  PopcornRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref PopcornVPC
+      Tags:
+        - Key: Name
+          Value: popcorn-route-table
+
+  PopcornRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref PopcornRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref PopcornInternetGateway
+
+  PopcornSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PopcornRedisSubnet
+      RouteTableId: !Ref PopcornRouteTable
+
+  PopcornRedisSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for Popcorn Redis cluster
+      VpcId: !Ref PopcornVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 6379
+          ToPort: 6379
+          CidrIp: 10.0.0.0/16
+      Tags:
+        - Key: Name
+          Value: popcorn-redis-sg
+
+  PopcornRedisSubnetGroup:
+    Type: AWS::ElastiCache::SubnetGroup
+    Properties:
+      Description: Subnet group for Popcorn Redis cluster
+      SubnetIds: 
+        - !Ref PopcornRedisSubnet
+
+  PopcornRedisCluster:
+    Type: AWS::ElastiCache::ReplicationGroup
+    Properties:
+      ReplicationGroupDescription: Redis cluster for Popcorn app
+      Engine: redis
+      EngineVersion: '7.0'
+      CacheNodeType: cache.t4g.micro
+      NumNodeGroups: 1
+      ReplicasPerNodeGroup: 0
+      AutomaticFailoverEnabled: false
+      CacheSubnetGroupName: !Ref PopcornRedisSubnetGroup
+      SecurityGroupIds: 
+        - !Ref PopcornRedisSecurityGroup
+      Tags:
+        - Key: Project
+          Value: Popcorn
