@@ -95,3 +95,21 @@ Resources:
       Tags:
         - Key: Project
           Value: Popcorn
+
+  MoviesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: popcorn-movies
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: movie_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: movie_id
+          KeyType: HASH
+      TimeToLiveSpecification:
+        AttributeName: expires_at
+        Enabled: true
+      Tags:
+        - Key: Project
+          Value: Popcorn

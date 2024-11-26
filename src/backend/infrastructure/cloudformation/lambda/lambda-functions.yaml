@@ -1,0 +1,268 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Popcorn App - Lambda Functions Setup'
+
+Parameters:
+  RedisHost:
+    Type: String
+    Description: 'Redis cluster endpoint'
+    Default: 'pop1kit3akpzug55.bfrx5n.ng.0001.use1.cache.amazonaws.com'
+  DeploymentBucket:
+    Type: String
+    Description: 'S3 bucket for Lambda deployment packages'
+  VpcId:
+    Type: String
+    Description: 'VPC ID where Redis is deployed'
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: 'Subnet IDs where Lambda will run'
+  SecurityGroupId:
+    Type: String
+    Description: 'Security Group ID for Redis access'
+
+Resources:
+  # IAM Role for Lambda functions
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      Policies:
+        - PolicyName: PopcornLambdaPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                Resource: 
+                  - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/popcorn-*
+
+  # Lambda Layer for dependencies
+  DependenciesLayer:
+    Type: AWS::Lambda::LayerVersion
+    Properties:
+      LayerName: popcorn-dependencies
+      Description: Redis and other dependencies
+      CompatibleRuntimes:
+        - python3.9
+      Content:
+        S3Bucket: !Ref DeploymentBucket
+        S3Key: lambda-layers/dependencies.zip
+
+  # Party Management Lambda
+  PartyManagementFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: popcorn-party-management
+      Handler: handler.create_party
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: !Ref DeploymentBucket
+        S3Key: lambda/party-management.zip
+      Runtime: python3.9
+      Timeout: 30
+      MemorySize: 256
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref SecurityGroupId
+        SubnetIds: !Ref SubnetIds
+      Environment:
+        Variables:
+          PARTY_TABLE_NAME: popcorn-party-info
+          USER_TABLE_NAME: popcorn-user-info
+          REDIS_HOST: !Ref RedisHost
+      Layers:
+        - !Ref DependenciesLayer
+
+  PartyStatusFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: popcorn-party-status
+      Handler: handler.get_party_status
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: !Ref DeploymentBucket
+        S3Key: lambda/party-management.zip
+      Runtime: python3.9
+      Timeout: 30
+      MemorySize: 256
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref SecurityGroupId
+        SubnetIds: !Ref SubnetIds
+      Environment:
+        Variables:
+          PARTY_TABLE_NAME: popcorn-party-info
+          USER_TABLE_NAME: popcorn-user-info
+          REDIS_HOST: !Ref RedisHost
+      Layers:
+        - !Ref DependenciesLayer
+
+  # Vote Processing Lambda
+  VoteProcessingFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: popcorn-vote-processing
+      Handler: handler.submit_vote
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: !Ref DeploymentBucket
+        S3Key: lambda/vote-processing.zip
+      Runtime: python3.9
+      Timeout: 30
+      MemorySize: 256
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref SecurityGroupId
+        SubnetIds: !Ref SubnetIds
+      Environment:
+        Variables:
+          VOTES_TABLE_NAME: popcorn-final-votes
+          PARTY_TABLE_NAME: popcorn-party-info
+          REDIS_HOST: !Ref RedisHost
+      Layers:
+        - !Ref DependenciesLayer
+
+# Vote Status Lambda
+  VoteStatusFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: popcorn-vote-status
+      Handler: handler.get_votes
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: !Ref DeploymentBucket
+        S3Key: lambda/vote-processing.zip
+      Runtime: python3.9
+      Timeout: 30
+      MemorySize: 256
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref SecurityGroupId
+        SubnetIds: !Ref SubnetIds
+      Environment:
+        Variables:
+          VOTES_TABLE_NAME: popcorn-final-votes
+          PARTY_TABLE_NAME: popcorn-party-info
+          REDIS_HOST: !Ref RedisHost
+      Layers:
+        - !Ref DependenciesLayer
+
+  # Movie Selection Lambda
+  MovieSelectionFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: popcorn-movie-selection
+      Handler: handler.select_movies
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: !Ref DeploymentBucket
+        S3Key: lambda/movie-selection.zip
+      Runtime: python3.9
+      Timeout: 30
+      MemorySize: 256
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref SecurityGroupId
+        SubnetIds: !Ref SubnetIds
+      Environment:
+        Variables:
+          PREFERENCES_TABLE_NAME: popcorn-user-preferences
+          PARTY_TABLE_NAME: popcorn-party-info
+          MOVIES_TABLE_NAME: popcorn-movies
+          REDIS_HOST: !Ref RedisHost
+      Layers:
+        - !Ref DependenciesLayer
+
+  # API Gateway
+  PopcornApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: popcorn-api
+      Description: API for Popcorn movie selection app
+
+  Suite2RatingFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: popcorn-suite2-rating
+      Handler: handler.submit_rating
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: !Ref DeploymentBucket
+        S3Key: lambda/suite2-rating.zip
+      Runtime: python3.9
+      Timeout: 30
+      MemorySize: 256
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref SecurityGroupId
+        SubnetIds: !Ref SubnetIds
+      Environment:
+        Variables:
+          PREFERENCES_TABLE_NAME: popcorn-user-preferences
+          PARTY_TABLE_NAME: popcorn-party-info
+          REDIS_HOST: !Ref RedisHost
+      Layers:
+        - !Ref DependenciesLayer
+
+  Suite2RatingStatusFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: popcorn-suite2-rating-status
+      Handler: handler.get_ratings
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: !Ref DeploymentBucket
+        S3Key: lambda/suite2-rating.zip
+      Runtime: python3.9
+      Timeout: 30
+      MemorySize: 256
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref SecurityGroupId
+        SubnetIds: !Ref SubnetIds
+      Environment:
+        Variables:
+          PREFERENCES_TABLE_NAME: popcorn-user-preferences
+          PARTY_TABLE_NAME: popcorn-party-info
+          REDIS_HOST: !Ref RedisHost
+      Layers:
+        - !Ref DependenciesLayer
+
+  JoinPartyFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: popcorn-join-party
+      Handler: handler.join_party
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: !Ref DeploymentBucket
+        S3Key: lambda/party-management.zip
+      Runtime: python3.9
+      Timeout: 30
+      MemorySize: 256
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref SecurityGroupId
+        SubnetIds: !Ref SubnetIds
+      Environment:
+        Variables:
+          PARTY_TABLE_NAME: popcorn-party-info
+          USER_TABLE_NAME: popcorn-user-info
+          REDIS_HOST: !Ref RedisHost
+      Layers:
+        - !Ref DependenciesLayer
+  # API Endpoints (we'll add these next)
