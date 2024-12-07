@@ -4,6 +4,7 @@ import redis
 import os
 import uuid
 from datetime import datetime, timedelta
+from decimal import Decimal
 
 # Initialize AWS clients
 dynamodb = boto3.resource('dynamodb')
@@ -16,6 +17,12 @@ redis_client = redis.Redis(
     port=6379,
     decode_responses=True
 )
+
+# Add this helper function at the top of the file
+def decimal_default(obj):
+    if isinstance(obj, Decimal):
+        return int(obj) if obj % 1 == 0 else float(obj)
+    raise TypeError
 
 def create_party(event, context):
     """
@@ -93,8 +100,10 @@ def join_party(event, context):
     Join an existing party/lobby
     """
     try:
+        # Extract party_id from path parameters
+        party_id = event['pathParameters']['party_id']
+        # Extract user_name from body
         body = json.loads(event['body'])
-        party_id = body['party_id']
         user_name = body['user_name']
         
         # Generate user ID
@@ -149,13 +158,27 @@ def join_party(event, context):
             'body': json.dumps({'error': 'Could not join party'})
         }
 
+# Then in get_party_status, update the return statement to use this serializer
 def get_party_status(event, context):
-    """
-    Get current party status and participants
-    """
     try:
-        party_id = event['pathParameters']['party_id']
+        # Add debug logging
+        print("Event received:", json.dumps(event))
         
+        # More flexible parameter handling
+        party_id = None
+        if event.get('pathParameters'):
+            party_id = event['pathParameters'].get('party_id')
+        elif event.get('path'):
+            # Try to extract from path if pathParameters not available
+            path_parts = event['path'].split('/')
+            party_id = path_parts[-1]
+            
+        if not party_id:
+            return {
+                'statusCode': 400,
+                'body': json.dumps({'error': 'Party ID not provided'})
+            }
+            
         # Get from DynamoDB first
         party_response = party_table.get_item(Key={'party_id': party_id})
         if 'Item' not in party_response:
@@ -185,7 +208,7 @@ def get_party_status(event, context):
                 'status': party['status'],
                 'current_suite': party['current_suite'],
                 'participants': party['participants']
-            })
+            }, default=decimal_default)
         }
         
     except Exception as e:

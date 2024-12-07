@@ -1,3 +1,4 @@
 .DS_Store
 *response.json
 *response*.json
+.env

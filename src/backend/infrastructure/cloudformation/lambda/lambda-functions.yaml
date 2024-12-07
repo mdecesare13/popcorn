@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'Popcorn App - Lambda Functions Setup'
+Description: 'Popcorn App - Lambda Functions'
 
 Parameters:
   RedisHost:
@@ -18,57 +18,18 @@ Parameters:
   SecurityGroupId:
     Type: String
     Description: 'Security Group ID for Redis access'
+  CoreStackName:
+    Type: String
+    Description: 'Name of the core infrastructure stack'
 
 Resources:
-  # IAM Role for Lambda functions
-  LambdaExecutionRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-            Action: sts:AssumeRole
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
-      Policies:
-        - PolicyName: PopcornLambdaPolicy
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - dynamodb:GetItem
-                  - dynamodb:PutItem
-                  - dynamodb:UpdateItem
-                  - dynamodb:DeleteItem
-                  - dynamodb:Query
-                  - dynamodb:Scan
-                Resource: 
-                  - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/popcorn-*
-
-  # Lambda Layer for dependencies
-  DependenciesLayer:
-    Type: AWS::Lambda::LayerVersion
-    Properties:
-      LayerName: popcorn-dependencies
-      Description: Redis and other dependencies
-      CompatibleRuntimes:
-        - python3.9
-      Content:
-        S3Bucket: !Ref DeploymentBucket
-        S3Key: lambda-layers/dependencies.zip
-
-  # Party Management Lambda
   PartyManagementFunction:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: popcorn-party-management
       Handler: handler.create_party
-      Role: !GetAtt LambdaExecutionRole.Arn
+      Role: !ImportValue 
+        Fn::Sub: ${CoreStackName}-LambdaExecutionRoleArn
       Code:
         S3Bucket: !Ref DeploymentBucket
         S3Key: lambda/party-management.zip
@@ -85,14 +46,16 @@ Resources:
           USER_TABLE_NAME: popcorn-user-info
           REDIS_HOST: !Ref RedisHost
       Layers:
-        - !Ref DependenciesLayer
+        - !ImportValue 
+          Fn::Sub: ${CoreStackName}-DependenciesLayerArn
 
   PartyStatusFunction:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: popcorn-party-status
       Handler: handler.get_party_status
-      Role: !GetAtt LambdaExecutionRole.Arn
+      Role: !ImportValue 
+        Fn::Sub: ${CoreStackName}-LambdaExecutionRoleArn
       Code:
         S3Bucket: !Ref DeploymentBucket
         S3Key: lambda/party-management.zip
@@ -109,15 +72,16 @@ Resources:
           USER_TABLE_NAME: popcorn-user-info
           REDIS_HOST: !Ref RedisHost
       Layers:
-        - !Ref DependenciesLayer
+        - !ImportValue 
+          Fn::Sub: ${CoreStackName}-DependenciesLayerArn
 
-  # Vote Processing Lambda
   VoteProcessingFunction:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: popcorn-vote-processing
       Handler: handler.submit_vote
-      Role: !GetAtt LambdaExecutionRole.Arn
+      Role: !ImportValue 
+        Fn::Sub: ${CoreStackName}-LambdaExecutionRoleArn
       Code:
         S3Bucket: !Ref DeploymentBucket
         S3Key: lambda/vote-processing.zip
@@ -134,15 +98,16 @@ Resources:
           PARTY_TABLE_NAME: popcorn-party-info
           REDIS_HOST: !Ref RedisHost
       Layers:
-        - !Ref DependenciesLayer
+        - !ImportValue 
+          Fn::Sub: ${CoreStackName}-DependenciesLayerArn
 
-# Vote Status Lambda
   VoteStatusFunction:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: popcorn-vote-status
       Handler: handler.get_votes
-      Role: !GetAtt LambdaExecutionRole.Arn
+      Role: !ImportValue 
+        Fn::Sub: ${CoreStackName}-LambdaExecutionRoleArn
       Code:
         S3Bucket: !Ref DeploymentBucket
         S3Key: lambda/vote-processing.zip
@@ -159,15 +124,16 @@ Resources:
           PARTY_TABLE_NAME: popcorn-party-info
           REDIS_HOST: !Ref RedisHost
       Layers:
-        - !Ref DependenciesLayer
+        - !ImportValue 
+          Fn::Sub: ${CoreStackName}-DependenciesLayerArn
 
-  # Movie Selection Lambda
   MovieSelectionFunction:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: popcorn-movie-selection
       Handler: handler.select_movies
-      Role: !GetAtt LambdaExecutionRole.Arn
+      Role: !ImportValue 
+        Fn::Sub: ${CoreStackName}-LambdaExecutionRoleArn
       Code:
         S3Bucket: !Ref DeploymentBucket
         S3Key: lambda/movie-selection.zip
@@ -185,21 +151,16 @@ Resources:
           MOVIES_TABLE_NAME: popcorn-movies
           REDIS_HOST: !Ref RedisHost
       Layers:
-        - !Ref DependenciesLayer
-
-  # API Gateway
-  PopcornApi:
-    Type: AWS::ApiGateway::RestApi
-    Properties:
-      Name: popcorn-api
-      Description: API for Popcorn movie selection app
+        - !ImportValue 
+          Fn::Sub: ${CoreStackName}-DependenciesLayerArn
 
   Suite2RatingFunction:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: popcorn-suite2-rating
       Handler: handler.submit_rating
-      Role: !GetAtt LambdaExecutionRole.Arn
+      Role: !ImportValue 
+        Fn::Sub: ${CoreStackName}-LambdaExecutionRoleArn
       Code:
         S3Bucket: !Ref DeploymentBucket
         S3Key: lambda/suite2-rating.zip
@@ -216,14 +177,16 @@ Resources:
           PARTY_TABLE_NAME: popcorn-party-info
           REDIS_HOST: !Ref RedisHost
       Layers:
-        - !Ref DependenciesLayer
+        - !ImportValue 
+          Fn::Sub: ${CoreStackName}-DependenciesLayerArn
 
   Suite2RatingStatusFunction:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: popcorn-suite2-rating-status
       Handler: handler.get_ratings
-      Role: !GetAtt LambdaExecutionRole.Arn
+      Role: !ImportValue 
+        Fn::Sub: ${CoreStackName}-LambdaExecutionRoleArn
       Code:
         S3Bucket: !Ref DeploymentBucket
         S3Key: lambda/suite2-rating.zip
@@ -240,14 +203,16 @@ Resources:
           PARTY_TABLE_NAME: popcorn-party-info
           REDIS_HOST: !Ref RedisHost
       Layers:
-        - !Ref DependenciesLayer
+        - !ImportValue 
+          Fn::Sub: ${CoreStackName}-DependenciesLayerArn
 
   JoinPartyFunction:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: popcorn-join-party
       Handler: handler.join_party
-      Role: !GetAtt LambdaExecutionRole.Arn
+      Role: !ImportValue 
+        Fn::Sub: ${CoreStackName}-LambdaExecutionRoleArn
       Code:
         S3Bucket: !Ref DeploymentBucket
         S3Key: lambda/party-management.zip
@@ -264,5 +229,54 @@ Resources:
           USER_TABLE_NAME: popcorn-user-info
           REDIS_HOST: !Ref RedisHost
       Layers:
-        - !Ref DependenciesLayer
-  # API Endpoints (we'll add these next)
+        - !ImportValue 
+          Fn::Sub: ${CoreStackName}-DependenciesLayerArn
+
+Outputs:
+  PartyManagementFunctionArn:
+    Description: ARN of Party Management Function
+    Value: !GetAtt PartyManagementFunction.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-PartyManagementFunctionArn
+
+  JoinPartyFunctionArn:
+    Description: ARN of Join Party Function
+    Value: !GetAtt JoinPartyFunction.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-JoinPartyFunctionArn
+
+  PartyStatusFunctionArn:
+    Description: ARN of Party Status Function
+    Value: !GetAtt PartyStatusFunction.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-PartyStatusFunctionArn
+
+  VoteProcessingFunctionArn:
+    Description: ARN of Vote Processing Function
+    Value: !GetAtt VoteProcessingFunction.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-VoteProcessingFunctionArn
+
+  VoteStatusFunctionArn:
+    Description: ARN of Vote Status Function
+    Value: !GetAtt VoteStatusFunction.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-VoteStatusFunctionArn
+
+  Suite2RatingFunctionArn:
+    Description: ARN of Suite2 Rating Function
+    Value: !GetAtt Suite2RatingFunction.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-Suite2RatingFunctionArn
+
+  Suite2RatingStatusFunctionArn:
+    Description: ARN of Suite2 Rating Status Function
+    Value: !GetAtt Suite2RatingStatusFunction.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-Suite2RatingStatusFunctionArn
+
+  MovieSelectionFunctionArn:
+    Description: ARN of Movie Selection Function
+    Value: !GetAtt MovieSelectionFunction.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-MovieSelectionFunctionArn

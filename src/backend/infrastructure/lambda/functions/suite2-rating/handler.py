@@ -27,10 +27,13 @@ def submit_rating(event, context):
     Submit a rating (1-10) for a movie in Suite 2
     """
     try:
+        # Get path parameters
+        party_id = event['pathParameters']['party_id']
+        movie_id = event['pathParameters']['movie_id']
+        
+        # Get other data from body
         body = json.loads(event['body'])
-        party_id = body['party_id']
         user_id = body['user_id']
-        movie_id = body['movie_id']
         rating = int(body['rating'])  # Rating from 1-10
         
         if not (1 <= rating <= 10):
