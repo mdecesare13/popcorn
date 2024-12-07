@@ -4,9 +4,25 @@
   "description": "An AI-powered movie selection app for groups.",
   "main": "index.js",
   "scripts": {
+    "dev": "nodemon src/backend/express/server.js",
+    "start": "node src/backend/express/server.js",
+    "vercel-build": "echo building",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.7.8",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "redis": "^4.7.0",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "@vercel/node": "^3.2.27",
+    "nodemon": "^3.1.7",
+    "socket.io-client": "^4.8.1"
+  }
 }

@@ -95,3 +95,23 @@ Resources:
       Tags:
         - Key: Project
           Value: Popcorn
+
+  DynamoDBEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref PopcornVPC
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.dynamodb
+      VpcEndpointType: Gateway
+      RouteTableIds: 
+        - !Ref PopcornRouteTable
+
+  LambdaEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref PopcornVPC
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.lambda
+      VpcEndpointType: Interface
+      SecurityGroupIds:
+        - !Ref PopcornRedisSecurityGroup
+      SubnetIds:
+        - !Ref PopcornRedisSubnet

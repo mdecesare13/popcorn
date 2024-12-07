@@ -1,0 +1,393 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Popcorn App - API Gateway'
+
+Parameters:
+  LambdaStackName:
+    Type: String
+    Description: 'Name of the Lambda functions stack'
+
+Resources:
+  PopcornApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: popcorn-api
+      Description: API for Popcorn movie selection app
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+
+  # Party API Resources
+  PartyResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref PopcornApi
+      ParentId: !GetAtt PopcornApi.RootResourceId
+      PathPart: party
+
+  PartyIdResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref PopcornApi
+      ParentId: !Ref PartyResource
+      PathPart: "{party_id}"
+
+  JoinPartyResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref PopcornApi
+      ParentId: !Ref PartyIdResource
+      PathPart: join
+
+  # Suite 2 Rating Resources
+  RateResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref PopcornApi
+      ParentId: !Ref PartyIdResource
+      PathPart: rate
+
+  RateMovieIdResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref PopcornApi
+      ParentId: !Ref RateResource
+      PathPart: "{movie_id}"
+
+  RatingsStatusResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref PopcornApi
+      ParentId: !Ref PartyIdResource
+      PathPart: ratings
+
+  RatingsMovieIdResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref PopcornApi
+      ParentId: !Ref RatingsStatusResource
+      PathPart: "{movie_id}"
+  
+  # Suite 3 Voting Resources
+  VoteResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref PopcornApi
+      ParentId: !Ref PartyIdResource
+      PathPart: vote
+
+  VotesStatusResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref PopcornApi
+      ParentId: !Ref PartyIdResource
+      PathPart: votes
+
+  # Movie Selection Resource
+  MoviesResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref PopcornApi
+      ParentId: !Ref PartyIdResource
+      PathPart: movies
+
+  # Methods
+  CreatePartyMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref PopcornApi
+      ResourceId: !Ref PartyResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 
+          - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FunctionArn}/invocations
+          - FunctionArn: !ImportValue 
+              Fn::Sub: ${LambdaStackName}-PartyManagementFunctionArn
+      OperationName: CreateParty
+
+  JoinPartyMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref PopcornApi
+      ResourceId: !Ref JoinPartyResource
+      HttpMethod: PUT
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 
+          - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FunctionArn}/invocations
+          - FunctionArn: !ImportValue 
+              Fn::Sub: ${LambdaStackName}-JoinPartyFunctionArn
+      OperationName: JoinParty
+
+  GetPartyMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref PopcornApi
+      ResourceId: !Ref PartyResource
+      HttpMethod: GET
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 
+          - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FunctionArn}/invocations
+          - FunctionArn: !ImportValue 
+              Fn::Sub: ${LambdaStackName}-PartyStatusFunctionArn
+      OperationName: GetPartyStatus
+
+  GetPartyMethodWithId:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref PopcornApi
+      ResourceId: !Ref PartyIdResource
+      HttpMethod: GET
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 
+          - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FunctionArn}/invocations
+          - FunctionArn: !ImportValue 
+              Fn::Sub: ${LambdaStackName}-PartyStatusFunctionArn
+
+  SubmitRatingMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref PopcornApi
+      ResourceId: !Ref RateMovieIdResource
+      HttpMethod: PUT
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 
+          - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FunctionArn}/invocations
+          - FunctionArn: !ImportValue 
+              Fn::Sub: ${LambdaStackName}-Suite2RatingFunctionArn
+
+  GetRatingsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref PopcornApi
+      ResourceId: !Ref RatingsMovieIdResource
+      HttpMethod: GET
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 
+          - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FunctionArn}/invocations
+          - FunctionArn: !ImportValue 
+              Fn::Sub: ${LambdaStackName}-Suite2RatingStatusFunctionArn
+
+  SubmitVoteMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref PopcornApi
+      ResourceId: !Ref VoteResource
+      HttpMethod: PUT
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 
+          - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FunctionArn}/invocations
+          - FunctionArn: !ImportValue 
+              Fn::Sub: ${LambdaStackName}-VoteProcessingFunctionArn
+
+  GetVotesMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref PopcornApi
+      ResourceId: !Ref VotesStatusResource
+      HttpMethod: GET
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 
+          - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FunctionArn}/invocations
+          - FunctionArn: !ImportValue 
+              Fn::Sub: ${LambdaStackName}-VoteStatusFunctionArn
+
+  # CORS Configuration
+  PartyOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref PopcornApi
+      ResourceId: !Ref PartyIdResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+
+  # Movie Selection Method
+  GetMoviesMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref PopcornApi
+      ResourceId: !Ref MoviesResource
+      HttpMethod: GET
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 
+          - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FunctionArn}/invocations
+          - FunctionArn: !ImportValue 
+              Fn::Sub: ${LambdaStackName}-MovieSelectionFunctionArn
+
+  # CORS for Movies endpoint
+  MoviesOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref PopcornApi
+      ResourceId: !Ref MoviesResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+
+  # API Deployment
+  ApiDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      - CreatePartyMethod
+      - JoinPartyMethod
+      - GetPartyMethod
+      - GetPartyMethodWithId
+      - PartyOptionsMethod
+      - SubmitRatingMethod
+      - GetRatingsMethod
+      - SubmitVoteMethod
+      - GetVotesMethod
+      - GetMoviesMethod
+      - MoviesOptionsMethod
+    Properties:
+      RestApiId: !Ref PopcornApi
+
+  # API Stage
+  ApiStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      RestApiId: !Ref PopcornApi
+      DeploymentId: !Ref ApiDeployment
+      StageName: v2
+
+  # Lambda Permissions
+  PartyManagementPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !ImportValue 
+        Fn::Sub: ${LambdaStackName}-PartyManagementFunctionArn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${PopcornApi}/*
+
+  JoinPartyPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !ImportValue 
+        Fn::Sub: ${LambdaStackName}-JoinPartyFunctionArn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${PopcornApi}/*
+
+  PartyStatusPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !ImportValue 
+        Fn::Sub: ${LambdaStackName}-PartyStatusFunctionArn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${PopcornApi}/*
+
+  Suite2RatingPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !ImportValue 
+        Fn::Sub: ${LambdaStackName}-Suite2RatingFunctionArn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${PopcornApi}/*
+
+  Suite2RatingStatusPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !ImportValue 
+        Fn::Sub: ${LambdaStackName}-Suite2RatingStatusFunctionArn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${PopcornApi}/*
+
+  VoteProcessingPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !ImportValue 
+        Fn::Sub: ${LambdaStackName}-VoteProcessingFunctionArn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${PopcornApi}/*
+
+  VoteStatusPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !ImportValue 
+        Fn::Sub: ${LambdaStackName}-VoteStatusFunctionArn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${PopcornApi}/*
+
+  MovieSelectionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !ImportValue 
+        Fn::Sub: ${LambdaStackName}-MovieSelectionFunctionArn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${PopcornApi}/*
+
+Outputs:
+  ApiEndpoint:
+    Description: API Gateway endpoint URL
+    Value: !Sub https://${PopcornApi}.execute-api.${AWS::Region}.amazonaws.com/v2
+    Export:
+      Name: !Sub ${AWS::StackName}-ApiEndpoint
+
+  ApiId:
+    Description: API Gateway ID
+    Value: !Ref PopcornApi
+    Export:
+      Name: !Sub ${AWS::StackName}-ApiId
