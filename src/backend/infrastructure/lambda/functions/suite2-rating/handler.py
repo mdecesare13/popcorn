@@ -4,6 +4,7 @@ import redis
 import os
 from datetime import datetime
 from decimal import Decimal
+from common.logging_util import init_logger
 
 def decimal_default(obj):
     if isinstance(obj, Decimal):
@@ -26,6 +27,9 @@ def submit_rating(event, context):
     """
     Submit a rating (1-10) for a movie in Suite 2
     """
+
+    logger = init_logger('submit_rating', event)
+    
     try:
         # Get path parameters
         party_id = event['pathParameters']['party_id']
@@ -36,7 +40,19 @@ def submit_rating(event, context):
         user_id = body['user_id']
         rating = int(body['rating'])  # Rating from 1-10
         
+        logger.info('Processing rating submission', {
+            'party_id': party_id,
+            'movie_id': movie_id,
+            'user_id': user_id,
+            'rating': rating
+        })
+
         if not (1 <= rating <= 10):
+            logger.warn('Invalid rating value', {
+                'party_id': party_id,
+                'movie_id': movie_id,
+                'rating': rating
+            })
             return {
                 'statusCode': 400,
                 'body': json.dumps({'error': 'Rating must be between 1 and 10'})
@@ -87,6 +103,13 @@ def submit_rating(event, context):
         redis_client.hincrby(redis_key, 'total_ratings', 1)
         redis_client.hincrby(redis_key, 'sum_ratings', rating)
         
+        logger.info('Rating saved successfully', {
+            'party_id': party_id,
+            'movie_id': movie_id,
+            'preference_id': preference_id,
+            'total_ratings': len(current_ratings)
+        })
+
         return {
             'statusCode': 200,
             'headers': {
@@ -100,7 +123,10 @@ def submit_rating(event, context):
         }
         
     except Exception as e:
-        print(f"Error submitting rating: {str(e)}")
+        logger.error('Failed to submit rating', e, {
+            'party_id': party_id if 'party_id' in locals() else None,
+            'movie_id': movie_id if 'movie_id' in locals() else None
+        })
         return {
             'statusCode': 500,
             'body': json.dumps({'error': 'Could not submit rating'})
@@ -110,19 +136,35 @@ def get_ratings(event, context):
     """
     Get ratings for a movie in Suite 2
     """
+
+    logger = init_logger('get_ratings', event)
+
     try:
         party_id = event['pathParameters']['party_id']
         movie_id = event['pathParameters']['movie_id']
+        
+        logger.info('Getting ratings', {
+            'party_id': party_id,
+            'movie_id': movie_id
+        })
         
         # Get real-time ratings from Redis
         redis_key = f"suite2_ratings:{party_id}:{movie_id}"
         ratings_data = redis_client.hgetall(redis_key)
         
         if ratings_data:
+            logger.info('Found ratings in Redis cache', {
+                'party_id': party_id,
+                'movie_id': movie_id
+            })
             total_ratings = int(ratings_data.get('total_ratings', 0))
             sum_ratings = int(ratings_data.get('sum_ratings', 0))
             avg_rating = sum_ratings / total_ratings if total_ratings > 0 else 0
         else:
+            logger.info('Ratings not in cache, calculating from DynamoDB', {
+                'party_id': party_id,
+                'movie_id': movie_id
+            })
             # If not in Redis, calculate from DynamoDB
             response = preferences_table.query(
                 IndexName='PartyIndex',
@@ -147,6 +189,13 @@ def get_ratings(event, context):
             if ratings:
                 redis_client.hset(redis_key, 'total_ratings', total_ratings)
                 redis_client.hset(redis_key, 'sum_ratings', sum(ratings))
+
+            logger.info('Calculated ratings from DynamoDB', {
+                'party_id': party_id,
+                'movie_id': movie_id,
+                'total_ratings': total_ratings,
+                'average_rating': avg_rating
+            })
         
         return {
             'statusCode': 200,
@@ -163,7 +212,10 @@ def get_ratings(event, context):
         }
         
     except Exception as e:
-        print(f"Error getting ratings: {str(e)}")
+        logger.error('Failed to get ratings', e, {
+            'party_id': party_id if 'party_id' in locals() else None,
+            'movie_id': movie_id if 'movie_id' in locals() else None
+        })
         return {
             'statusCode': 500,
             'body': json.dumps({'error': 'Could not get ratings'})

@@ -1,0 +1,1 @@
+{"statusCode": 200, "headers": {"Access-Control-Allow-Origin": "*", "Access-Control-Allow-Credentials": true}, "body": "{\"party_id\": \"763760bd-b8ce-4438-b63d-42292bb1680f\", \"movie_id\": \"movie1\", \"vote_counts\": {\"maybe\": \"1\", \"total\": \"2\", \"yes\": \"1\"}}"}

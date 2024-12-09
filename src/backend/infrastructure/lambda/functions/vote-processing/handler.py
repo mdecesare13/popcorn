@@ -3,6 +3,7 @@ import boto3
 import redis
 import os
 from datetime import datetime
+from common.logging_util import init_logger
 
 # Initialize AWS clients
 dynamodb = boto3.resource('dynamodb')
@@ -20,6 +21,9 @@ def submit_vote(event, context):
     """
     Submit a vote for a movie in Suite 3
     """
+
+    logger = init_logger('submit_vote', event)
+
     try:
         body = json.loads(event['body'])
         party_id = body['party_id']
@@ -27,6 +31,13 @@ def submit_vote(event, context):
         movie_id = body['movie_id']
         vote = body['vote']  # 'yes', 'no', or 'seen'
         
+        logger.info('Processing vote submission', {
+            'party_id': party_id,
+            'movie_id': movie_id,
+            'user_id': user_id,
+            'vote': vote
+        })
+
         # Create unique vote ID
         vote_id = f"{party_id}#{user_id}#{movie_id}"
         
@@ -46,6 +57,12 @@ def submit_vote(event, context):
         redis_client.hincrby(redis_key, vote, 1)
         redis_client.hincrby(redis_key, 'total', 1)
         
+        logger.info('Vote saved successfully', {
+            'vote_id': vote_id,
+            'party_id': party_id,
+            'movie_id': movie_id
+        })
+
         # Check if all participants have voted
         party_response = party_table.get_item(Key={'party_id': party_id})
         if 'Item' in party_response:
@@ -53,7 +70,20 @@ def submit_vote(event, context):
             total_participants = len(party['participants'])
             
             votes_count = int(redis_client.hget(redis_key, 'total') or 0)
+
+            logger.info('Vote count status', {
+                'party_id': party_id,
+                'movie_id': movie_id,
+                'votes_count': votes_count,
+                'total_participants': total_participants
+            })
+
             if votes_count >= total_participants:
+                logger.info('All participants have voted', {
+                    'party_id': party_id,
+                    'movie_id': movie_id
+                })
+
                 # All votes are in for this movie
                 redis_client.hset(f"party:{party_id}", 'voting_complete', 'true')
         
@@ -70,26 +100,48 @@ def submit_vote(event, context):
         }
         
     except Exception as e:
-        print(f"Error processing vote: {str(e)}")
+        logger.error('Failed to process vote', e, {
+            'party_id': party_id if 'party_id' in locals() else None,
+            'movie_id': movie_id if 'movie_id' in locals() else None
+        })
         return {
             'statusCode': 500,
             'body': json.dumps({'error': 'Could not process vote'})
         }
 
-def get_vote_status(event, context):
+def get_votes(event, context):
     """
     Get current voting status for a party
     """
+
+    logger = init_logger('get_vote_status', event)
+
     try:
         party_id = event['pathParameters']['party_id']
         movie_id = event['pathParameters']['movie_id']
         
+        logger.info('Getting vote status', {
+            'party_id': party_id,
+            'movie_id': movie_id
+        })
+
         # Get real-time vote counts from Redis
         redis_key = f"votes:{party_id}:{movie_id}"
         vote_counts = redis_client.hgetall(redis_key)
-        
+
+        logger.info('Found vote counts in Redis', {
+            'party_id': party_id,
+            'movie_id': movie_id,
+            'vote_counts': vote_counts
+        })
+
         # If no data in Redis, check DynamoDB
         if not vote_counts:
+            logger.info('Vote counts not in cache, checking DynamoDB', {
+                'party_id': party_id,
+                'movie_id': movie_id
+            })
+
             response = votes_table.query(
                 KeyConditionExpression='party_id = :pid',
                 FilterExpression='movie_id = :mid',
@@ -100,6 +152,11 @@ def get_vote_status(event, context):
             )
             
             if response['Items']:
+                logger.info('Retrieved vote counts from DynamoDB', {
+                    'party_id': party_id,
+                    'movie_id': movie_id,
+                    'total_votes': len(response['Items'])
+                })
                 vote_counts = {
                     'yes': sum(1 for item in response['Items'] if item['vote'] == 'yes'),
                     'no': sum(1 for item in response['Items'] if item['vote'] == 'no'),
@@ -124,7 +181,10 @@ def get_vote_status(event, context):
         }
         
     except Exception as e:
-        print(f"Error getting vote status: {str(e)}")
+        logger.error('Failed to get vote status', e, {
+            'party_id': party_id if 'party_id' in locals() else None,
+            'movie_id': movie_id if 'movie_id' in locals() else None
+        })
         return {
             'statusCode': 500,
             'body': json.dumps({'error': 'Could not get vote status'})

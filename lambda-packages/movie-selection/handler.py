@@ -5,6 +5,7 @@ import os
 from datetime import datetime
 from boto3.dynamodb.conditions import Key
 from decimal import Decimal
+from common.logging_util import init_logger
 
 # Initialize AWS clients
 dynamodb = boto3.resource('dynamodb')
@@ -28,12 +29,17 @@ def select_movies(event, context):
     """
     Select movies for Suite 3 based on party preferences
     """
+
+    logger = init_logger('select_movies', event)
+
     try:
         party_id = event['pathParameters']['party_id']
+        logger.info('Starting movie selection', {'party_id': party_id})
         
         # Get party info
         party_response = party_table.get_item(Key={'party_id': party_id})
         if 'Item' not in party_response:
+            logger.warn('Party not found for movie selection', {'party_id': party_id})
             return {
                 'statusCode': 404,
                 'body': json.dumps({'error': 'Party not found'})
@@ -53,7 +59,7 @@ def select_movies(event, context):
         genre_dealbreakers = set()
         decade_preferences = set()
         year_cutoff = None
-        
+
         for pref in preferences_response['Items']:
             prefs = pref['preferences']
             # Add genre preferences
@@ -76,7 +82,13 @@ def select_movies(event, context):
             'year_cutoff': str(year_cutoff) if year_cutoff else ''
         })
         
-        # After the existing preference aggregation code, add:
+        logger.info('Aggregated party preferences', {
+            'party_id': party_id,
+            'num_genre_preferences': len(genre_preferences),
+            'num_dealbreakers': len(genre_dealbreakers),
+            'num_decade_preferences': len(decade_preferences),
+            'year_cutoff': year_cutoff
+        })
         
         # Get Suite 2 ratings for this party
         suite2_preferences = preferences_table.query(
@@ -99,6 +111,11 @@ def select_movies(event, context):
                     movie_ratings[movie_id]['total'] += rating['rating']
                     movie_ratings[movie_id]['count'] += 1
         
+        logger.info('Processed Suite 2 ratings', {
+            'party_id': party_id,
+            'num_rated_movies': len(movie_ratings)
+        })
+
         # Define scan parameters
         scan_kwargs = {
             'FilterExpression': 'size(streaming_platforms) > :zero',
@@ -150,6 +167,13 @@ def select_movies(event, context):
         if remaining_slots > 0:
             selected_movies.extend([m[0] for m in unrated_movies[:remaining_slots]])  # Fill remaining slots
         
+        logger.info('Movies selected successfully', {
+            'party_id': party_id,
+            'num_selected': len(selected_movies),
+            'num_rated': len(rated_movies),
+            'num_unrated': len(unrated_movies)
+        })
+
         return {
             'statusCode': 200,
             'headers': {
@@ -163,7 +187,9 @@ def select_movies(event, context):
         }
         
     except Exception as e:
-        print(f"Error selecting movies: {str(e)}")
+        logger.error('Failed to select movies', e, {
+            'party_id': party_id if 'party_id' in locals() else None
+        })
         return {
             'statusCode': 500,
             'body': json.dumps({'error': 'Could not select movies'})
@@ -173,8 +199,13 @@ def get_selected_movies(event, context):
     """
     Get the previously selected movies for a party
     """
+
+    logger = init_logger('get_selected_movies', event)
+
     try:
         party_id = event['pathParameters']['party_id']
+
+        logger.info('Getting selected movies', {'party_id': party_id})
         
         # Try to get from Redis first
         movies_key = f"selected_movies:{party_id}"
@@ -182,7 +213,12 @@ def get_selected_movies(event, context):
         
         if cached_movies:
             movies = [json.loads(m) for m in cached_movies]
+            logger.info('Found cached movie selections', {
+                'party_id': party_id,
+                'num_movies': len(movies)
+            })
         else:
+            logger.warn('No cached movies found', {'party_id': party_id})
             # If not in Redis, return error as selections should be cached
             return {
                 'statusCode': 404,
@@ -202,7 +238,9 @@ def get_selected_movies(event, context):
         }
         
     except Exception as e:
-        print(f"Error getting selected movies: {str(e)}")
+        logger.error('Failed to get selected movies', e, {
+            'party_id': party_id if 'party_id' in locals() else None
+        })
         return {
             'statusCode': 500,
             'body': json.dumps({'error': 'Could not get selected movies'})

@@ -5,6 +5,7 @@ import os
 import uuid
 from datetime import datetime, timedelta
 from decimal import Decimal
+from common.logging_util import init_logger
 
 # Initialize AWS clients
 dynamodb = boto3.resource('dynamodb')
@@ -28,6 +29,10 @@ def create_party(event, context):
     """
     Create a new viewing party/lobby
     """
+
+    # initialize logger
+    logger = init_logger('create_party', event)
+
     try:
         body = json.loads(event['body'])
         host_name = body['host_name']
@@ -69,6 +74,12 @@ def create_party(event, context):
         })
         redis_client.expire(redis_key, 86400)  # 24 hours TTL
         
+        logger.info('Party created successfully', {
+            'party_id': party_id,
+            'host_name': host_name,
+            'num_streaming_services': len(streaming_services)
+        })
+
         return {
             'statusCode': 200,
             'headers': {
@@ -83,7 +94,7 @@ def create_party(event, context):
         }
         
     except Exception as e:
-        print(f"Error creating party: {str(e)}")
+        logger.error('Failed to create party', e)
         return {
             'statusCode': 500,
             'headers': {
@@ -99,6 +110,10 @@ def join_party(event, context):
     """
     Join an existing party/lobby
     """
+
+    # initialize logger
+    logger = init_logger('join_party', event)
+
     try:
         # Extract party_id from path parameters
         party_id = event['pathParameters']['party_id']
@@ -112,6 +127,7 @@ def join_party(event, context):
         # Get party from DynamoDB
         party_response = party_table.get_item(Key={'party_id': party_id})
         if 'Item' not in party_response:
+            logger.warn('Party not found for join request', {'party_id': party_id})
             return {
                 'statusCode': 404,
                 'body': json.dumps({'error': 'Party not found'})
@@ -119,6 +135,10 @@ def join_party(event, context):
             
         party = party_response['Item']
         if party['status'] != 'lobby':
+            logger.warn('Attempted to join non-lobby party', {
+                'party_id': party_id,
+                'party_status': party['status']
+            })
             return {
                 'statusCode': 400,
                 'body': json.dumps({'error': 'Party is no longer accepting new participants'})
@@ -138,6 +158,12 @@ def join_party(event, context):
         redis_key = f"party:{party_id}"
         redis_client.hset(redis_key, f"user:{user_id}", 'active')
         
+        logger.info('User joined party successfully', {
+            'party_id': party_id,
+            'user_id': user_id,
+            'party_size': len(party['participants'])
+        })
+
         return {
             'statusCode': 200,
             'headers': {
@@ -152,7 +178,7 @@ def join_party(event, context):
         }
         
     except Exception as e:
-        print(f"Error joining party: {str(e)}")
+        logger.error('Failed to join party', e)
         return {
             'statusCode': 500,
             'body': json.dumps({'error': 'Could not join party'})
@@ -160,9 +186,11 @@ def join_party(event, context):
 
 # Then in get_party_status, update the return statement to use this serializer
 def get_party_status(event, context):
+
+    # initialize logger
+    logger = init_logger('get_party_status', event)
+
     try:
-        # Add debug logging
-        print("Event received:", json.dumps(event))
         
         # More flexible parameter handling
         party_id = None
@@ -172,8 +200,12 @@ def get_party_status(event, context):
             # Try to extract from path if pathParameters not available
             path_parts = event['path'].split('/')
             party_id = path_parts[-1]
+        
+        # Add debug logging
+        logger.info('Party status request received', {'party_id': party_id})
             
         if not party_id:
+            logger.warn('Party status request missing party_id')
             return {
                 'statusCode': 400,
                 'body': json.dumps({'error': 'Party ID not provided'})
@@ -182,6 +214,7 @@ def get_party_status(event, context):
         # Get from DynamoDB first
         party_response = party_table.get_item(Key={'party_id': party_id})
         if 'Item' not in party_response:
+            logger.warn('Party not found for status request', {'party_id': party_id})
             return {
                 'statusCode': 404,
                 'body': json.dumps({'error': 'Party not found'})
@@ -195,6 +228,10 @@ def get_party_status(event, context):
         
         # Merge Redis status if available
         if redis_status:
+            logger.info('Redis status merged with party data', {
+                'party_id': party_id,
+                'redis_keys': list(redis_status.keys())
+            })
             party['real_time_status'] = redis_status
             
         return {
@@ -212,7 +249,7 @@ def get_party_status(event, context):
         }
         
     except Exception as e:
-        print(f"Error getting party status: {str(e)}")
+        logger.error('Failed to get party status', e)
         return {
             'statusCode': 500,
             'body': json.dumps({'error': 'Could not get party status'})

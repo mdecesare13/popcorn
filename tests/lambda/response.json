@@ -1,0 +1,1 @@
+{"statusCode": 200, "headers": {"Access-Control-Allow-Origin": "*", "Access-Control-Allow-Credentials": true}, "body": "{\"party_id\": \"28f488c3-fa97-4421-b873-924fc9628dc3\", \"host_id\": \"dbcb1c5b-5195-40d8-bf59-6165bd82060d\", \"status\": \"lobby\"}"}
