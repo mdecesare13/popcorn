@@ -364,7 +364,7 @@ def transform_movie_data(raw_movies: List[Dict[str, Any]]) -> List[Dict[str, Any
 # DBTITLE 1,main
 # COMMAND ----------
 
-def main(num_pages: int = 3):
+def main(num_pages: int = 50):
     """
     Main ETL process for movie data.
     
@@ -586,6 +586,6 @@ for rating in test_ratings:
 # MAGIC %sql
 # MAGIC -- COMMAND ----------
 # MAGIC
-# MAGIC SELECT * 
+# MAGIC SELECT movie_id, title, content_rating
 # MAGIC FROM popcorn.movies
-# MAGIC LIMIT 10;
+# MAGIC WHERE content_rating IS NOT NULL

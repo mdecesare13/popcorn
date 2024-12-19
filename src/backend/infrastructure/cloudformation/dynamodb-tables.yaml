@@ -104,12 +104,21 @@ Resources:
       AttributeDefinitions:
         - AttributeName: movie_id
           AttributeType: S
+        - AttributeName: year
+          AttributeType: N
       KeySchema:
         - AttributeName: movie_id
           KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: YearIndex
+          KeySchema:
+            - AttributeName: year
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
       TimeToLiveSpecification:
         AttributeName: expires_at
-        Enabled: true
+        Enabled: false  # Changed to false since movie data shouldn't expire
       Tags:
         - Key: Project
           Value: Popcorn
