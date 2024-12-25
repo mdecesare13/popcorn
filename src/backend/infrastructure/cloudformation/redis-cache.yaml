@@ -115,3 +115,14 @@ Resources:
         - !Ref PopcornRedisSecurityGroup
       SubnetIds:
         - !Ref PopcornRedisSubnet
+  
+  SecretsManagerEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref PopcornVPC
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.secretsmanager
+      VpcEndpointType: Interface
+      SecurityGroupIds:
+        - !Ref PopcornRedisSecurityGroup
+      SubnetIds:
+        - !Ref PopcornRedisSubnet

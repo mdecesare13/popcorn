@@ -1,5 +1,6 @@
 redis==4.5.1
 openai==1.3.5  # Latest stable version
+async_timeout==5.0.1
 redis==4.5.1   # Match existing version
 boto3==1.33.6  # AWS SDK for Lambda
 python-json-logger==2.0.7  # Structured logging

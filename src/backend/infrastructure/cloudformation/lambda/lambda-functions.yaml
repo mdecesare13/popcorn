@@ -231,6 +231,26 @@ Resources:
       Layers:
         - !ImportValue 
           Fn::Sub: ${CoreStackName}-DependenciesLayerArn
+  
+  OpenAITestFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: popcorn-openai-test
+      Handler: handler.lambda_handler
+      Role: !ImportValue 
+        Fn::Sub: ${CoreStackName}-LambdaExecutionRoleArn
+      Code:
+        S3Bucket: !Ref DeploymentBucket
+        S3Key: lambda/openai-test.zip
+      Runtime: python3.9
+      Timeout: 120
+      MemorySize: 256
+      Environment:
+        Variables:
+          MOVIES_TABLE_NAME: popcorn-movies
+      Layers:
+        - !ImportValue 
+          Fn::Sub: ${CoreStackName}-DependenciesLayerArn
 
 Outputs:
   PartyManagementFunctionArn:
@@ -280,3 +300,9 @@ Outputs:
     Value: !GetAtt MovieSelectionFunction.Arn
     Export:
       Name: !Sub ${AWS::StackName}-MovieSelectionFunctionArn
+
+  OpenAITestFunctionArn:
+    Description: ARN of OpenAI Test Function
+    Value: !GetAtt OpenAITestFunction.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-OpenAITestFunctionArn
