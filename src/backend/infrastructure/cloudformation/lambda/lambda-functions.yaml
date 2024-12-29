@@ -274,6 +274,31 @@ Resources:
         - !ImportValue 
           Fn::Sub: ${CoreStackName}-DependenciesLayerArn
 
+  Suite1PreferencesFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: popcorn-suite1-preferences
+      Handler: handler.handler
+      Role: !ImportValue 
+        Fn::Sub: ${CoreStackName}-LambdaExecutionRoleArn
+      Code:
+        S3Bucket: !Ref DeploymentBucket
+        S3Key: lambda/suite1-preferences.zip
+      Runtime: python3.9
+      Timeout: 30
+      MemorySize: 256
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref SecurityGroupId
+        SubnetIds: !Ref SubnetIds
+      Environment:
+        Variables:
+          PREFERENCES_TABLE_NAME: popcorn-user-preferences
+          REDIS_HOST: !Ref RedisHost
+      Layers:
+        - !ImportValue 
+          Fn::Sub: ${CoreStackName}-DependenciesLayerArn
+
 Outputs:
   PartyManagementFunctionArn:
     Description: ARN of Party Management Function
@@ -334,3 +359,9 @@ Outputs:
     Value: !GetAtt Suite2MovieSelectionFunction.Arn
     Export:
       Name: !Sub ${AWS::StackName}-Suite2MovieSelectionFunctionArn
+
+  Suite1PreferencesFunctionArn:
+    Description: ARN of Suite 1 Preferences Function
+    Value: !GetAtt Suite1PreferencesFunction.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-Suite1PreferencesFunctionArn

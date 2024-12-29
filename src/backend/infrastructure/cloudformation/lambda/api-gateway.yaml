@@ -90,6 +90,14 @@ Resources:
       ParentId: !Ref PartyIdResource
       PathPart: movies
 
+  #Suite 1 Preference Submit Resource
+  PreferencesResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref PopcornApi
+      ParentId: !Ref PartyIdResource
+      PathPart: preferences
+
   # Methods
   CreatePartyMethod:
     Type: AWS::ApiGateway::Method
@@ -280,6 +288,46 @@ Resources:
             method.response.header.Access-Control-Allow-Methods: true
             method.response.header.Access-Control-Allow-Origin: true
 
+  #Suite 1 Preferences Methods
+  SubmitPreferencesMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref PopcornApi
+      ResourceId: !Ref PreferencesResource
+      HttpMethod: PUT
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 
+          - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FunctionArn}/invocations
+          - FunctionArn: !ImportValue 
+              Fn::Sub: ${LambdaStackName}-Suite1PreferencesFunctionArn
+
+  PreferencesOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref PopcornApi
+      ResourceId: !Ref PreferencesResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'PUT,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+
   # API Deployment
   ApiDeployment:
     Type: AWS::ApiGateway::Deployment
@@ -295,6 +343,8 @@ Resources:
       - GetVotesMethod
       - GetMoviesMethod
       - MoviesOptionsMethod
+      - SubmitPreferencesMethod
+      - PreferencesOptionsMethod
     Properties:
       RestApiId: !Ref PopcornApi
 
@@ -376,6 +426,15 @@ Resources:
       Action: lambda:InvokeFunction
       FunctionName: !ImportValue 
         Fn::Sub: ${LambdaStackName}-MovieSelectionFunctionArn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${PopcornApi}/*
+
+  Suite1PreferencesPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !ImportValue 
+        Fn::Sub: ${LambdaStackName}-Suite1PreferencesFunctionArn
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${PopcornApi}/*
 
