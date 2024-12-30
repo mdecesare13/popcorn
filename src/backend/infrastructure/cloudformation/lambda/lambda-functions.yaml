@@ -274,6 +274,28 @@ Resources:
         - !ImportValue 
           Fn::Sub: ${CoreStackName}-DependenciesLayerArn
 
+  Suite3MovieSelectionFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: popcorn-suite3-movie-selection
+      Handler: handler.lambda_handler
+      Role: !ImportValue 
+        Fn::Sub: ${CoreStackName}-LambdaExecutionRoleArn
+      Code:
+        S3Bucket: !Ref DeploymentBucket
+        S3Key: lambda/suite3-movie-selection.zip
+      Runtime: python3.9
+      Timeout: 120  # Increased for OpenAI API call
+      MemorySize: 256
+      Environment:
+        Variables:
+          PREFERENCES_TABLE_NAME: popcorn-user-preferences
+          MOVIES_TABLE_NAME: popcorn-movies
+          REDIS_HOST: !Ref RedisHost
+      Layers:
+        - !ImportValue 
+          Fn::Sub: ${CoreStackName}-DependenciesLayerArn
+
   Suite1PreferencesFunction:
     Type: AWS::Lambda::Function
     Properties:
@@ -359,6 +381,12 @@ Outputs:
     Value: !GetAtt Suite2MovieSelectionFunction.Arn
     Export:
       Name: !Sub ${AWS::StackName}-Suite2MovieSelectionFunctionArn
+
+  Suite3MovieSelectionFunctionArn:
+    Description: ARN of Suite 3 Movie Selection Function
+    Value: !GetAtt Suite3MovieSelectionFunction.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-Suite3MovieSelectionFunctionArn
 
   Suite1PreferencesFunctionArn:
     Description: ARN of Suite 1 Preferences Function
