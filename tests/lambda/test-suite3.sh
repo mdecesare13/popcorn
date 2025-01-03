@@ -37,23 +37,13 @@ PREF_RESPONSE=$(curl -s -X PUT "${API_ENDPOINT}/party/${PARTY_ID}/preferences" \
 echo "Preferences response: $PREF_RESPONSE"
 
 echo "4. Getting Suite 2 movies..."
-EVENT_JSON="{\"pathParameters\":{\"party_id\":\"${PARTY_ID}\"}}"
-
-MOVIES_RESPONSE=$(aws lambda invoke \
-  --function-name popcorn-suite2-movie-selection \
-  --payload "$EVENT_JSON" \
-  --cli-binary-format raw-in-base64-out \
-  suite2_response.json)
+MOVIES_RESPONSE=$(curl -s -X GET "${API_ENDPOINT}/party/${PARTY_ID}/suite2movies")
 
 echo "Suite 2 Response:"
-if [ -f suite2_response.json ]; then
-    cat suite2_response.json | jq .
-else
-    echo "No response file generated"
-fi
+echo "${MOVIES_RESPONSE}" | jq '.'
 
 echo "5. Submitting Suite 2 ratings..."
-cat suite2_response.json | jq -r '.body' | jq '.movies[]' | jq -c '.' | while read -r MOVIE; do
+echo "${MOVIES_RESPONSE}" | jq '.movies[]' | jq -c '.' | while read -r MOVIE; do
   MOVIE_ID=$(echo $MOVIE | jq -r '.movie_id')
   echo "Rating movie: $MOVIE_ID"
   RATING_RESPONSE=$(curl -s -X PUT "${API_ENDPOINT}/party/${PARTY_ID}/rate/${MOVIE_ID}" \
@@ -67,19 +57,9 @@ cat suite2_response.json | jq -r '.body' | jq '.movies[]' | jq -c '.' | while re
 done
 
 echo "6. Getting Suite 3 movies..."
-EVENT_JSON="{\"pathParameters\":{\"party_id\":\"${PARTY_ID}\"}}"
-
-SUITE3_RESPONSE=$(aws lambda invoke \
-  --function-name popcorn-suite3-movie-selection \
-  --payload "$EVENT_JSON" \
-  --cli-binary-format raw-in-base64-out \
-  suite3_response.json)
+SUITE3_RESPONSE=$(curl -s -X GET "${API_ENDPOINT}/party/${PARTY_ID}/suite3movies")
 
 echo "Suite 3 Response:"
-if [ -f suite3_response.json ]; then
-    cat suite3_response.json | jq .
-else
-    echo "No response file generated"
-fi
+echo "${SUITE3_RESPONSE}" | jq '.'
 
 echo "Test complete!"

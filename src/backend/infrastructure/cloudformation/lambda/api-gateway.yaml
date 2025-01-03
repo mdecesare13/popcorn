@@ -97,6 +97,20 @@ Resources:
       RestApiId: !Ref PopcornApi
       ParentId: !Ref PartyIdResource
       PathPart: preferences
+  
+  Suite2MoviesResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref PopcornApi
+      ParentId: !Ref PartyIdResource
+      PathPart: suite2movies
+
+  Suite3MoviesResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref PopcornApi
+      ParentId: !Ref PartyIdResource
+      PathPart: suite3movies
 
   # Methods
   CreatePartyMethod:
@@ -327,6 +341,86 @@ Resources:
             method.response.header.Access-Control-Allow-Headers: true
             method.response.header.Access-Control-Allow-Methods: true
             method.response.header.Access-Control-Allow-Origin: true
+  
+  # Methods for Suite 2 Movies
+  GetSuite2MoviesMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref PopcornApi
+      ResourceId: !Ref Suite2MoviesResource
+      HttpMethod: GET
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 
+          - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FunctionArn}/invocations
+          - FunctionArn: !ImportValue 
+              Fn::Sub: ${LambdaStackName}-Suite2MovieSelectionFunctionArn
+
+  Suite2MoviesOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref PopcornApi
+      ResourceId: !Ref Suite2MoviesResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+
+  # Methods for Suite 3 Movies
+  GetSuite3MoviesMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref PopcornApi
+      ResourceId: !Ref Suite3MoviesResource
+      HttpMethod: GET
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 
+          - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FunctionArn}/invocations
+          - FunctionArn: !ImportValue 
+              Fn::Sub: ${LambdaStackName}-Suite3MovieSelectionFunctionArn
+
+  Suite3MoviesOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref PopcornApi
+      ResourceId: !Ref Suite3MoviesResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
 
   # API Deployment
   ApiDeployment:
@@ -345,6 +439,10 @@ Resources:
       - MoviesOptionsMethod
       - SubmitPreferencesMethod
       - PreferencesOptionsMethod
+      - GetSuite2MoviesMethod
+      - Suite2MoviesOptionsMethod
+      - GetSuite3MoviesMethod
+      - Suite3MoviesOptionsMethod
     Properties:
       RestApiId: !Ref PopcornApi
 
@@ -437,6 +535,25 @@ Resources:
         Fn::Sub: ${LambdaStackName}-Suite1PreferencesFunctionArn
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${PopcornApi}/*
+  
+  Suite2MovieSelectionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !ImportValue 
+        Fn::Sub: ${LambdaStackName}-Suite2MovieSelectionFunctionArn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${PopcornApi}/*/GET/party/*/suite2movies
+
+  Suite3MovieSelectionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !ImportValue 
+        Fn::Sub: ${LambdaStackName}-Suite3MovieSelectionFunctionArn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${PopcornApi}/*/GET/party/*/suite3movies
+
 
 Outputs:
   ApiEndpoint:
