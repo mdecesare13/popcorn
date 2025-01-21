@@ -144,6 +144,30 @@ Resources:
           - FunctionArn: !ImportValue 
               Fn::Sub: ${LambdaStackName}-JoinPartyFunctionArn
       OperationName: JoinParty
+  
+  JoinPartyOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref PopcornApi
+      ResourceId: !Ref JoinPartyResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type'"
+              method.response.header.Access-Control-Allow-Methods: "'PUT,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
 
   GetPartyMethod:
     Type: AWS::ApiGateway::Method
@@ -428,6 +452,7 @@ Resources:
     DependsOn:
       - CreatePartyMethod
       - JoinPartyMethod
+      - JoinPartyOptionsMethod
       - GetPartyMethod
       - GetPartyMethodWithId
       - PartyOptionsMethod

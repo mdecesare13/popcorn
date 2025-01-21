@@ -2,3 +2,6 @@
 *response.json
 *response*.json
 .env
+.env*.local
+node_modules/
+.next/
