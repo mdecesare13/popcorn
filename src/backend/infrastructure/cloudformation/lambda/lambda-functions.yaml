@@ -321,6 +321,31 @@ Resources:
         - !ImportValue 
           Fn::Sub: ${CoreStackName}-DependenciesLayerArn
 
+  UpdatePartyStatusFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: popcorn-update-party-status
+      Handler: handler.update_party_status
+      Role: !ImportValue 
+        Fn::Sub: ${CoreStackName}-LambdaExecutionRoleArn
+      Code:
+        S3Bucket: !Ref DeploymentBucket
+        S3Key: lambda/update-party-status.zip
+      Runtime: python3.9
+      Timeout: 30
+      MemorySize: 256
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref SecurityGroupId
+        SubnetIds: !Ref SubnetIds
+      Environment:
+        Variables:
+          PARTY_TABLE_NAME: popcorn-party-info
+          REDIS_HOST: !Ref RedisHost
+      Layers:
+        - !ImportValue 
+          Fn::Sub: ${CoreStackName}-DependenciesLayerArn
+
 Outputs:
   PartyManagementFunctionArn:
     Description: ARN of Party Management Function
@@ -393,3 +418,9 @@ Outputs:
     Value: !GetAtt Suite1PreferencesFunction.Arn
     Export:
       Name: !Sub ${AWS::StackName}-Suite1PreferencesFunctionArn
+
+  UpdatePartyStatusFunctionArn:
+    Description: ARN of Update Party Status Function
+    Value: !GetAtt UpdatePartyStatusFunction.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-UpdatePartyStatusFunctionArn

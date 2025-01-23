@@ -111,6 +111,13 @@ Resources:
       RestApiId: !Ref PopcornApi
       ParentId: !Ref PartyIdResource
       PathPart: suite3movies
+    
+  UpdatePartyResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref PopcornApi
+      ParentId: !Ref PartyIdResource
+      PathPart: update
 
   # Methods
   CreatePartyMethod:
@@ -445,6 +452,45 @@ Resources:
             method.response.header.Access-Control-Allow-Headers: true
             method.response.header.Access-Control-Allow-Methods: true
             method.response.header.Access-Control-Allow-Origin: true
+  
+  UpdatePartyMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref PopcornApi
+      ResourceId: !Ref UpdatePartyResource
+      HttpMethod: PUT
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 
+          - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FunctionArn}/invocations
+          - FunctionArn: !ImportValue 
+              Fn::Sub: ${LambdaStackName}-UpdatePartyStatusFunctionArn
+
+  UpdatePartyOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref PopcornApi
+      ResourceId: !Ref UpdatePartyResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'PUT,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
 
   # API Deployment
   ApiDeployment:
@@ -468,6 +514,8 @@ Resources:
       - Suite2MoviesOptionsMethod
       - GetSuite3MoviesMethod
       - Suite3MoviesOptionsMethod
+      - UpdatePartyMethod
+      - UpdatePartyOptionsMethod
     Properties:
       RestApiId: !Ref PopcornApi
 
@@ -579,6 +627,14 @@ Resources:
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${PopcornApi}/*/GET/party/*/suite3movies
 
+  UpdatePartyStatusPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !ImportValue 
+        Fn::Sub: ${LambdaStackName}-UpdatePartyStatusFunctionArn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${PopcornApi}/*
 
 Outputs:
   ApiEndpoint:
