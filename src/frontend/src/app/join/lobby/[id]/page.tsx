@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 
 interface Participant {
   name: string;
@@ -17,6 +17,7 @@ interface PartyDetails {
 
 export default function MemberLobbyPage() {
   const params = useParams();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const userId = searchParams.get('userId');
   
@@ -24,7 +25,7 @@ export default function MemberLobbyPage() {
   const [error, setError] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch party details every 2 seconds
+  // Fetch party details every 5 seconds
   useEffect(() => {
     const fetchPartyDetails = async () => {
       try {
@@ -48,6 +49,12 @@ export default function MemberLobbyPage() {
 
         const data = await response.json();
         setPartyDetails(data);
+        
+        // If status has changed to active, redirect to suite 1
+        if (data.status === 'active') {
+          router.push(`/suite1/${params.id}?userId=${userId}`);
+        }
+
         setError('');
       } catch (error) {
         setError(error instanceof Error ? error.message : 'An error occurred');
@@ -59,12 +66,12 @@ export default function MemberLobbyPage() {
     // Initial fetch
     fetchPartyDetails();
 
-    // Set up polling
-    const pollInterval = setInterval(fetchPartyDetails, 2000);
+    // Set up polling with 5-second interval
+    const pollInterval = setInterval(fetchPartyDetails, 5000);
 
     // Cleanup
     return () => clearInterval(pollInterval);
-  }, [params.id]);
+  }, [params.id, userId, router]);
 
   if (isLoading) {
     return (

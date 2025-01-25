@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 
 interface Participant {
   name: string;
@@ -17,9 +17,11 @@ interface PartyDetails {
 
 export default function HostLobbyPage() {
   const params = useParams();
+  const router = useRouter();
   const [partyDetails, setPartyDetails] = useState<PartyDetails | null>(null);
   const [error, setError] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
+  const [isStarting, setIsStarting] = useState(false);
 
   // Fetch party details every 2 seconds
   useEffect(() => {
@@ -45,6 +47,13 @@ export default function HostLobbyPage() {
 
         const data = await response.json();
         setPartyDetails(data);
+        
+        // If status has changed to active, redirect to suite 1
+        if (data.status === 'active') {
+          const hostId = data.participants[0].user_id; // Host is always first participant
+          router.push(`/suite1/${params.id}?userId=${hostId}`);
+        }
+        
         setError('');
       } catch (error) {
         setError(error instanceof Error ? error.message : 'An error occurred');
@@ -61,11 +70,37 @@ export default function HostLobbyPage() {
 
     // Cleanup
     return () => clearInterval(pollInterval);
-  }, [params.id]);
+  }, [params.id, router]);
 
   const handleStart = async () => {
-    // TODO: Implement start functionality
-    console.log('Start clicked');
+    setIsStarting(true);
+    setError('');
+
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/party/${params.id}/update`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            status: 'active',
+            current_suite: 1
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'Failed to start party');
+      }
+
+      // Redirect will happen automatically through the polling effect
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to start party');
+      setIsStarting(false);
+    }
   };
 
   if (isLoading) {
@@ -115,9 +150,10 @@ export default function HostLobbyPage() {
       <div className="w-[400px]">
         <button
           onClick={handleStart}
-          className="w-full bg-[#4169E1] text-white text-xl font-semibold py-4 rounded-lg hover:opacity-90 transition-opacity"
+          disabled={isStarting}
+          className="w-full bg-[#4169E1] text-white text-xl font-semibold py-4 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
         >
-          Start!
+          {isStarting ? 'Starting...' : 'Start!'}
         </button>
       </div>
     </div>
