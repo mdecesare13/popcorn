@@ -222,6 +222,30 @@ Resources:
           - FunctionArn: !ImportValue 
               Fn::Sub: ${LambdaStackName}-Suite2RatingFunctionArn
 
+  SubmitRatingOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref PopcornApi
+      ResourceId: !Ref RateMovieIdResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type'"
+              method.response.header.Access-Control-Allow-Methods: "'PUT,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+
   GetRatingsMethod:
     Type: AWS::ApiGateway::Method
     Properties:
@@ -516,6 +540,7 @@ Resources:
       - GetPartyMethodWithId
       - PartyOptionsMethod
       - SubmitRatingMethod
+      - SubmitRatingOptionsMethod
       - GetRatingsMethod
       - SubmitVoteMethod
       - GetVotesMethod
