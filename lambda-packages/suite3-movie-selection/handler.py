@@ -13,6 +13,11 @@ from common.logging_util import init_logger
 dynamodb = boto3.resource('dynamodb')
 secretsmanager = boto3.client('secretsmanager', region_name='us-east-1')
 
+def decimal_default(obj):
+    if isinstance(obj, Decimal):
+        return float(obj)
+    raise TypeError
+
 def get_openai_api_key(logger):
     """Retrieve OpenAI API key from Secrets Manager."""
     try:
@@ -181,7 +186,19 @@ def get_matching_movies(preferences: Dict[str, Any], rated_movies: set, logger) 
             matching_movies.append(movie)
         
         logger.info(f"Found {len(matching_movies)} matching movies (excluding rated ones)")
-        return matching_movies
+        
+        # Sort movies by number of matching preferred genres to get most relevant ones
+        matching_movies.sort(key=lambda m: len(set(m['genres']).intersection(set(preferences['genre_preferences']))), reverse=True)
+        
+        # Take top 50 most relevant movies only
+        top_movies = matching_movies[:50]
+        
+        logger.info(f"Selected top {len(top_movies)} most relevant movies")
+        logger.info("Sample of matched movies:")
+        for movie in top_movies[:5]:
+            logger.info(f"- {movie['title']} ({movie['year']})")
+        
+        return top_movies
     except Exception as e:
         logger.error(f"Error getting matching movies: {str(e)}")
         logger.error(f"Error type: {type(e).__name__}")
@@ -198,6 +215,10 @@ def select_movies_with_openai(movies: List[Dict[str, Any]],
             api_key=get_openai_api_key(logger),
             timeout=120.0
         )
+        
+        # Handle Decimal serialization for genre ratings
+        logger.info("Serializing genre ratings")
+        genre_ratings = json.loads(json.dumps(genre_ratings, default=str))
         
         # Create movie choices text with full info for model context
         movie_choices = "\n".join([
@@ -223,23 +244,25 @@ def select_movies_with_openai(movies: List[Dict[str, Any]],
         Heavily weight your selection toward genres that received high ratings.
         Only select from the provided movies using their exact IDs.
         
+        For each selected movie, provide a plot summary that doesn't reveal the movie title.
+        
         Respond with a JSON object containing:
-        1. selected_movie_ids: array of exactly 5 movie IDs
-        2. plot_summaries: array of 5 plot summaries that don't reveal the movie titles
-
+        1. selected_movies: array of objects with movie_id and blind_summary
+        
         Example response format:
         {{
-            "selected_movie_ids": ["123", "456", "789", "012", "345"],
-            "plot_summaries": [
-                "A determined hero must save their world...",
-                "Two unlikely friends discover...",
-                ...
+            "selected_movies": [
+                {{
+                    "movie_id": "123",
+                    "blind_summary": "A determined hero must save their world..."
+                }},
+                // ... more movies
             ]
         }}"""
         
         logger.info("Calling OpenAI API")
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo-1106",  # Sufficient for preference analysis and within token limits
+            model="gpt-3.5-turbo-1106",
             messages=[
                 {"role": "system", "content": "You are a movie expert helping select films based on user preferences and past ratings."},
                 {"role": "user", "content": prompt}
@@ -251,23 +274,18 @@ def select_movies_with_openai(movies: List[Dict[str, Any]],
         # Parse OpenAI response
         logger.info("Processing OpenAI response")
         result = json.loads(response.choices[0].message.content)
-        selections = result['selected_movie_ids']
-        plot_summaries = result['plot_summaries']
         
-        logger.info(f"OpenAI selected {len(selections)} movies")
-        
-        # Get selected movies and add blind summaries
+        # Create full movie objects with blind summaries
         selected_movies = []
-        for i, movie_id in enumerate(selections):
-            movie = next((m for m in movies if m['movie_id'] == movie_id), None)
+        for selection in result['selected_movies']:
+            movie = next((m for m in movies if m['movie_id'] == selection['movie_id']), None)
             if movie:
-                # Create a clean version with only necessary info
-                selected_movies.append({
-                    'movie_id': movie['movie_id'],
-                    'plot_summary': plot_summaries[i]
-                })
+                # Create complete movie object with all data plus blind summary
+                selected_movie = movie.copy()  # Keep all original movie data
+                selected_movie['blind_summary'] = selection['blind_summary']  # Add blind summary
+                selected_movies.append(selected_movie)
         
-        logger.info(f"Returning {len(selected_movies)} movies for voting")
+        logger.info(f"Returning {len(selected_movies)} complete movie objects with blind summaries")
         return selected_movies
         
     except Exception as e:
@@ -278,7 +296,7 @@ def select_movies_with_openai(movies: List[Dict[str, Any]],
 def lambda_handler(event, context):
     """
     Main Lambda handler for Suite 3 movie selection.
-    Returns 5 movies (with only plot summaries) for blind voting.
+    Returns 5 movies with full details plus blind summaries for voting.
     """
     logger = init_logger('suite3-movie-selection', event)
     try:
@@ -297,6 +315,10 @@ def lambda_handler(event, context):
         # Get matching movies (excluding rated ones)
         matching_movies = get_matching_movies(preferences, rated_movies, logger)
         
+        # Handle Decimal serialization for matching movies
+        logger.info("Serializing matching movies")
+        matching_movies = json.loads(json.dumps(matching_movies, default=str))
+        
         if len(matching_movies) < 5:
             logger.error(f"Insufficient matching movies: {len(matching_movies)}")
             raise Exception("Not enough matching movies available for selection")
@@ -308,6 +330,10 @@ def lambda_handler(event, context):
             genre_ratings,
             logger
         )
+        
+        # Handle Decimal serialization for final response
+        logger.info("Preparing final response")
+        selected_movies = json.loads(json.dumps(selected_movies, default=str))
         
         logger.info("Successfully completed Suite 3 movie selection")
         return {
@@ -326,6 +352,10 @@ def lambda_handler(event, context):
         logger.error(f"Error type: {type(e).__name__}")
         return {
             'statusCode': 500,
+            'headers': {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Credentials': True
+            },
             'body': json.dumps({
                 'error': str(e),
                 'message': 'Error processing request'
