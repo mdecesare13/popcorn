@@ -17,6 +17,14 @@ redis_client = redis.Redis(
     decode_responses=True
 )
 
+# Common CORS headers
+CORS_HEADERS = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'OPTIONS,PUT,GET',
+    'Access-Control-Allow-Credentials': True
+}
+
 def submit_vote(event, context):
     """
     Submit a vote for a movie in Suite 3
@@ -89,10 +97,7 @@ def submit_vote(event, context):
         
         return {
             'statusCode': 200,
-            'headers': {
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Credentials': True
-            },
+            'headers': CORS_HEADERS,
             'body': json.dumps({
                 'message': 'Vote recorded successfully',
                 'vote_id': vote_id
@@ -106,6 +111,7 @@ def submit_vote(event, context):
         })
         return {
             'statusCode': 500,
+            'headers': CORS_HEADERS,
             'body': json.dumps({'error': 'Could not process vote'})
         }
 
@@ -169,10 +175,7 @@ def get_votes(event, context):
         
         return {
             'statusCode': 200,
-            'headers': {
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Credentials': True
-            },
+            'headers': CORS_HEADERS,
             'body': json.dumps({
                 'party_id': party_id,
                 'movie_id': movie_id,
@@ -187,5 +190,6 @@ def get_votes(event, context):
         })
         return {
             'statusCode': 500,
+            'headers': CORS_HEADERS,
             'body': json.dumps({'error': 'Could not get vote status'})
         }
