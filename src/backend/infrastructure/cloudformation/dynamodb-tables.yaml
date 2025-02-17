@@ -92,9 +92,6 @@ Resources:
       TimeToLiveSpecification:
         AttributeName: expires_at
         Enabled: true
-      Tags:
-        - Key: Project
-          Value: Popcorn
 
   MoviesTable:
     Type: AWS::DynamoDB::Table

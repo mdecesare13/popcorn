@@ -169,14 +169,14 @@ const Suite3Page = () => {
       for (let i = 0; i < votes.length; i++) {
         const vote = votes[i];
         setSubmitProgress((i / votes.length) * 100);
-
-        console.log('Submitting vote with body:', {
-          party_id: params.id,
-          user_id: userId,
-          movie_id: vote.movie_id,
-          vote: vote.vote
-        });
         
+        console.log('Submitting vote with body:', {
+              party_id: params.id,
+              user_id: userId,
+              movie_id: vote.movie_id,
+              vote: vote.vote
+            });
+            
         const response = await fetch(
           `${process.env.NEXT_PUBLIC_API_BASE_URL}/party/${params.id}/vote`,
           {
@@ -220,7 +220,10 @@ const Suite3Page = () => {
         }
       }
 
-      // Clear movies from localStorage after successful submission
+      // Store the full movie information for the final page
+      window.localStorage.setItem(`party_${params.id}_final_movies`, JSON.stringify(movies));
+
+      // Clear the suite3 specific storage
       window.localStorage.removeItem(`party_${params.id}_suite3_movies`);
 
       // Redirect to final lobby

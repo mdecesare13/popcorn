@@ -117,76 +117,61 @@ def submit_vote(event, context):
 
 def get_votes(event, context):
     """
-    Get current voting status for a party
+    Get current voting status for all movies in a party
     """
 
     logger = init_logger('get_vote_status', event)
 
     try:
         party_id = event['pathParameters']['party_id']
-        movie_id = event['pathParameters']['movie_id']
         
-        logger.info('Getting vote status', {
-            'party_id': party_id,
-            'movie_id': movie_id
+        logger.info('Getting vote status for party', {
+            'party_id': party_id
         })
 
-        # Get real-time vote counts from Redis
-        redis_key = f"votes:{party_id}:{movie_id}"
-        vote_counts = redis_client.hgetall(redis_key)
+        # Get all votes for this party using the new PartyIndex
+        response = votes_table.query(
+            IndexName='PartyIndex',  # Using our new GSI
+            KeyConditionExpression='party_id = :pid',
+            ExpressionAttributeValues={
+                ':pid': party_id
+            }
+        )
+        
+        # Aggregate votes by movie
+        vote_counts = {}
+        for item in response['Items']:
+            movie_id = item['movie_id']
+            vote = item['vote']
+            
+            if movie_id not in vote_counts:
+                vote_counts[movie_id] = {
+                    'yes': 0,
+                    'no': 0,
+                    'seen': 0,
+                    'total': 0
+                }
+            
+            vote_counts[movie_id][vote] += 1
+            vote_counts[movie_id]['total'] += 1
 
-        logger.info('Found vote counts in Redis', {
+        logger.info('Vote counts aggregated', {
             'party_id': party_id,
-            'movie_id': movie_id,
             'vote_counts': vote_counts
         })
-
-        # If no data in Redis, check DynamoDB
-        if not vote_counts:
-            logger.info('Vote counts not in cache, checking DynamoDB', {
-                'party_id': party_id,
-                'movie_id': movie_id
-            })
-
-            response = votes_table.query(
-                KeyConditionExpression='party_id = :pid',
-                FilterExpression='movie_id = :mid',
-                ExpressionAttributeValues={
-                    ':pid': party_id,
-                    ':mid': movie_id
-                }
-            )
-            
-            if response['Items']:
-                logger.info('Retrieved vote counts from DynamoDB', {
-                    'party_id': party_id,
-                    'movie_id': movie_id,
-                    'total_votes': len(response['Items'])
-                })
-                vote_counts = {
-                    'yes': sum(1 for item in response['Items'] if item['vote'] == 'yes'),
-                    'no': sum(1 for item in response['Items'] if item['vote'] == 'no'),
-                    'seen': sum(1 for item in response['Items'] if item['vote'] == 'seen'),
-                    'total': len(response['Items'])
-                }
-                
-                # Cache results in Redis
-                redis_client.hmset(redis_key, vote_counts)
         
         return {
             'statusCode': 200,
             'headers': CORS_HEADERS,
             'body': json.dumps({
                 'party_id': party_id,
-                'movie_id': movie_id,
                 'vote_counts': vote_counts
             })
         }
         
     except Exception as e:
         logger.error('Failed to get vote status', e, {
-            'party_id': party_id if 'party_id' in locals() else None,
-            'movie_id': movie_id if 'movie_id' in locals() else None
+            'party_id': party_id if 'party_id' in locals() else None
         })
         return {
             'statusCode': 500,
