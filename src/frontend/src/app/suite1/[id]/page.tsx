@@ -5,13 +5,10 @@ import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { Checkbox } from "@/components/ui/checkbox";
 
 const GENRES = [
-  "Documentary", "Fantasy", "Adventure", "War", "Animation",
-  "Comedy", "Music", "Thriller", "Crime", "History",
-  "Mystery", "TV Movie", "Drama", "Horror", "Western",
-  "Romance", "Family", "Science Fiction", "Action"
+  "Action","Drama","Comedy","Thriller","Adventure","Fantasy","Family","Science Fiction","Horror"
 ];
 
-const DECADES = ["1960", "1970", "1980", "1990", "2000", "2010", "2020"];
+const DECADES = ["1970", "1980", "1990", "2000", "2010", "2020"];
 
 export default function Suite1Page() {
   const params = useParams();
@@ -203,7 +200,7 @@ export default function Suite1Page() {
       {/* Genre Preferences */}
       <div className="w-full max-w-[600px] mb-8">
         <h3 className="text-2xl font-bold mb-4">What genres do you prefer? <span className="text-lg font-normal italic">Choose 2</span></h3>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           {GENRES.map((genre) => (
             <div key={`pref-${genre}`} className="flex items-center space-x-2">
               <Checkbox
@@ -226,7 +223,7 @@ export default function Suite1Page() {
       {/* Genre Dealbreakers */}
       <div className="w-full max-w-[600px] mb-8">
         <h3 className="text-2xl font-bold mb-4">What genres are absolute no-go's? <span className="text-lg font-normal italic">Choose 1</span></h3>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           {GENRES.map((genre) => (
             <div key={`deal-${genre}`} className="flex items-center space-x-2">
               <Checkbox
@@ -249,7 +246,7 @@ export default function Suite1Page() {
       {/* Decade Preferences */}
       <div className="w-full max-w-[600px] mb-8">
         <h3 className="text-2xl font-bold mb-4">Any decades you prefer? <span className="text-lg font-normal italic">Choose 2</span></h3>
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           {DECADES.map((decade) => (
             <div key={`decade-${decade}`} className="flex items-center space-x-2">
               <Checkbox
