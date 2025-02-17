@@ -54,10 +54,11 @@ const FinalLobbyPage = () => {
       const movieData = JSON.parse(savedMovies);
       setMovies(movieData);
       
-      // Initialize vote counts with 0s
+      // Initialize vote counts with 0s and include image_url
       setVoteCounts(movieData.map(movie => ({
         movie_id: movie.movie_id,
         title: movie.title,
+        image_url: movie.image_url,  // Add this line
         yes_votes: 0,
         no_votes: 0
       })));
@@ -88,10 +89,11 @@ const FinalLobbyPage = () => {
             seen: 0,
             total: 0
           };
-
+        
           return {
             movie_id: movie.movie_id,
             title: movie.title,
+            image_url: movie.image_url,
             yes_votes: parseInt(movieVotes.yes || '0'),
             no_votes: parseInt(movieVotes.no || '0')
           };
@@ -150,39 +152,15 @@ const FinalLobbyPage = () => {
         <h2 className="text-5xl font-bold text-white text-center mb-12">
           Final Results
         </h2>
-
-        <div className="flex gap-12">
-          {/* Left side - Selected movie */}
-          <div className="w-1/3">
-            <div className="sticky top-8">
-              {selectedMovie ? (
-                <div>
-                  <img 
-                    src={selectedMovie.image_url}
-                    alt={selectedMovie.title}
-                    className="w-full rounded-lg shadow-xl mb-4"
-                  />
-                  <h3 className="text-2xl font-bold mb-2">{selectedMovie.title}</h3>
-                  <p className="text-gray-400 mb-4">{selectedMovie.year}</p>
-                  <p className="text-gray-300">{selectedMovie.blind_summary}</p>
-                </div>
-              ) : (
-                <div className="flex items-center justify-center h-64 bg-white/5 rounded-lg">
-                  <p className="text-gray-400">Click a movie to see details</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Right side - Bar chart */}
-          <div className="w-2/3">
-            <BarChart 
-              data={voteCounts}
-              onBarClick={handleBarClick}
-            />
-          </div>
+  
+        {/* Bar chart - now full width */}
+        <div className="w-full">
+          <BarChart 
+            data={voteCounts}
+            onBarClick={handleBarClick}
+          />
         </div>
-
+  
         {/* Modal */}
         <MovieDetailsDialog
           movie={selectedMovie}
