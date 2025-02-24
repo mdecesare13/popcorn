@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { Slider } from '@/components/ui/slider';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 
 // Types
@@ -20,6 +19,17 @@ interface Rating {
   rating: number;
 }
 
+interface PartyDetails {
+  party_id: string;
+  status: string;
+  current_suite: number;
+  participants: {
+    user_id: string;
+    name: string;
+    status: string;
+  }[];
+}
+
 export default function Suite2Page() {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -29,15 +39,16 @@ export default function Suite2Page() {
   const [movies, setMovies] = useState<Movie[]>([]);
   const [ratings, setRatings] = useState<Rating[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMovies, setIsLoadingMovies] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [submitProgress, setSubmitProgress] = useState(0);
-  const [partyDetails, setPartyDetails] = useState(null);
+  const [partyDetails, setPartyDetails] = useState<PartyDetails | null>(null);
   const [isHost, setIsHost] = useState(false);
 
-  // Fetch party details and movies
+  // Initial setup and validation
   useEffect(() => {
-    const fetchData = async () => {
+    const validateAndSetup = async () => {
       try {
         // Get party details first
         const partyResponse = await fetch(
@@ -60,55 +71,44 @@ export default function Suite2Page() {
         setIsHost(isHostUser);
         
         if (partyData.status !== 'active' || partyData.current_suite !== 2) {
-          throw new Error('Please return to suite 2 lobby or wait for your host to proceed.');
+          router.push(`/suite2/lobby/${params.id}?userId=${userId}`);
+          return;
         }
 
-        // Only host fetches movies
-        if (isHostUser) {
-          const moviesResponse = await fetch(
-            `${process.env.NEXT_PUBLIC_API_BASE_URL}/party/${params.id}/suite2movies`,
-            {
-              method: 'GET',
-              headers: {
-                'Content-Type': 'application/json',
-              },
+        // Get movies from localStorage with retry for non-hosts
+        const getMoviesWithRetry = async (retries = 3, delay = 2000) => {
+          for (let i = 0; i < retries; i++) {
+            const savedMovies = window.localStorage.getItem(`party_${params.id}_movies`);
+            if (savedMovies) {
+              const moviesData = JSON.parse(savedMovies);
+              setMovies(moviesData);
+              setRatings(moviesData.map(movie => ({
+                movie_id: movie.movie_id,
+                rating: 5
+              })));
+              setIsLoadingMovies(false);
+              return true;
             }
-          );
-
-          if (!moviesResponse.ok) {
-            throw new Error('Failed to fetch movies');
+            if (i < retries - 1) {
+              await new Promise(resolve => setTimeout(resolve, delay));
+            }
           }
+          return false;
+        };
 
-          const moviesData = await moviesResponse.json();
-          window.localStorage.setItem(`party_${params.id}_movies`, JSON.stringify(moviesData.movies));
-          setMovies(moviesData.movies);
-          setRatings(moviesData.movies.map(movie => ({
-            movie_id: movie.movie_id,
-            rating: 5
-          })));
+        if (isHostUser) {
+          // Host should already have movies in localStorage from lobby
+          const success = await getMoviesWithRetry(1, 0); // Single immediate check
+          if (!success) {
+            router.push(`/suite2/lobby/${params.id}?userId=${userId}`);
+            return;
+          }
         } else {
-          // Non-host users get movies from localStorage
-          const savedMovies = window.localStorage.getItem(`party_${params.id}_movies`);
-          if (!savedMovies) {
-            // If no movies found, wait a bit and try again
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            const retryMovies = window.localStorage.getItem(`party_${params.id}_movies`);
-            if (!retryMovies) {
-              throw new Error('No movies found. Please try refreshing the page.');
-            }
-            const moviesData = JSON.parse(retryMovies);
-            setMovies(moviesData);
-            setRatings(moviesData.map(movie => ({
-              movie_id: movie.movie_id,
-              rating: 5
-            })));
-          } else {
-            const moviesData = JSON.parse(savedMovies);
-            setMovies(moviesData);
-            setRatings(moviesData.map(movie => ({
-              movie_id: movie.movie_id,
-              rating: 5
-            })));
+          // Non-hosts retry a few times
+          const success = await getMoviesWithRetry();
+          if (!success) {
+            router.push(`/suite2/lobby/${params.id}?userId=${userId}`);
+            return;
           }
         }
         
@@ -119,8 +119,8 @@ export default function Suite2Page() {
       }
     };
 
-    if (params.id && userId) fetchData();
-  }, [params.id, userId]);
+    if (params.id && userId) validateAndSetup();
+  }, [params.id, userId, router]);
 
   // Handle rating change
   const handleRatingChange = (movieId: string, newRating: number) => {
@@ -196,7 +196,7 @@ export default function Suite2Page() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || isLoadingMovies) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#151a24] text-white">
         <div className="text-lg">Loading...</div>

@@ -2,6 +2,16 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Progress } from "@/components/ui/progress";
 
 interface Participant {
   name: string;
@@ -26,8 +36,40 @@ export default function Suite2LobbyPage() {
   const [error, setError] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
-
+  const [isLoadingMovies, setIsLoadingMovies] = useState(false);
+  const [showTimeout, setShowTimeout] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState(0);
+  
   const isHost = partyDetails?.participants[0]?.user_id === userId;
+
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    let progressInterval: NodeJS.Timeout;
+    
+    if (isLoadingMovies) {
+      // Start 45 second timeout
+      timeoutId = setTimeout(() => {
+        setShowTimeout(true);
+        setIsLoadingMovies(false);
+      }, 45000);
+      
+      // Update progress bar every second
+      progressInterval = setInterval(() => {
+        setLoadingProgress(prev => {
+          if (prev >= 100) {
+            clearInterval(progressInterval);
+            return 100;
+          }
+          return prev + (100/45); // Increment to reach 100 in 45 seconds
+        });
+      }, 1000);
+    }
+
+    return () => {
+      clearTimeout(timeoutId);
+      clearInterval(progressInterval);
+    };
+  }, [isLoadingMovies]);
 
   // Fetch party details every 5 seconds
   useEffect(() => {
@@ -54,8 +96,11 @@ export default function Suite2LobbyPage() {
         const data = await response.json();
         setPartyDetails(data);
         
-        // If status is active and current_suite is 2, redirect to suite2 page
-        if (data.status === 'active' && data.current_suite === 2) {
+        // Check if movies exist in localStorage
+        const savedMovies = window.localStorage.getItem(`party_${params.id}_movies`);
+        
+        // If status is active and current_suite is 2 and movies exist, redirect
+        if (data.status === 'active' && data.current_suite === 2 && savedMovies) {
           router.push(`/suite2/${params.id}?userId=${userId}`);
         }
 
@@ -80,10 +125,31 @@ export default function Suite2LobbyPage() {
   const handleContinue = async () => {
     if (!isHost) return;
     
-    setIsUpdating(true);
+    setIsLoadingMovies(true);
+    setLoadingProgress(0);
     setError('');
 
     try {
+      // First fetch movies
+      const moviesResponse = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/party/${params.id}/suite2movies`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!moviesResponse.ok) {
+        throw new Error('Failed to fetch movies');
+      }
+
+      const moviesData = await moviesResponse.json();
+      window.localStorage.setItem(`party_${params.id}_movies`, JSON.stringify(moviesData.movies));
+
+      // Then update party status
+      setIsUpdating(true);
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/party/${params.id}/update`,
         {
@@ -105,8 +171,13 @@ export default function Suite2LobbyPage() {
       // Redirect will happen through the polling effect
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to continue to next suite');
+      setIsLoadingMovies(false);
       setIsUpdating(false);
     }
+  };
+
+  const handleRefresh = () => {
+    window.location.reload();
   };
 
   if (isLoading) {
@@ -132,7 +203,7 @@ export default function Suite2LobbyPage() {
         Popcorn
       </h1>
       <h2 className="text-5xl font-bold text-white text-center mb-12">
-        Suite 2 Complete!
+        Suite 1 Complete!
       </h2>
       
       {/* Party ID */}
@@ -148,7 +219,7 @@ export default function Suite2LobbyPage() {
           </div>
           <button
             onClick={handleContinue}
-            disabled={isUpdating}
+            disabled={isUpdating || isLoadingMovies}
             className="w-full bg-[#4169E1] text-yellow-400 text-xl font-semibold py-4 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
           >
             {isUpdating ? 'Continuing...' : 'Continue!'}
@@ -159,6 +230,38 @@ export default function Suite2LobbyPage() {
           Waiting for host to click continue
         </div>
       )}
+
+      {/* Loading Movies Dialog */}
+      <AlertDialog open={isLoadingMovies}>
+        <AlertDialogContent className="bg-[#1a2231] border-gray-700">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Getting Your Movies Ready</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-300">
+              Please wait while we select the perfect movies for your group...
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="my-4">
+            <Progress value={loadingProgress} className="h-2" />
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Timeout Dialog */}
+      <AlertDialog open={showTimeout}>
+        <AlertDialogContent className="bg-[#1a2231] border-gray-700">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Taking Longer Than Expected</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-300">
+              We're having trouble loading your movies. Please refresh the page to try again.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={handleRefresh} className="bg-[#4169E1] text-white hover:bg-[#4169E1]/90">
+              Refresh Page
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

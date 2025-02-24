@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
@@ -25,7 +24,18 @@ interface Vote {
   vote: 'yes' | 'no' | null;
 }
 
-const Suite3Page = () => {
+interface PartyDetails {
+  party_id: string;
+  status: string;
+  current_suite: number;
+  participants: {
+    user_id: string;
+    name: string;
+    status: string;
+  }[];
+}
+
+export default function Suite3Page() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -34,21 +44,23 @@ const Suite3Page = () => {
   const [movies, setMovies] = useState<Movie[]>([]);
   const [votes, setVotes] = useState<Vote[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isMounted, setIsMounted] = useState(false);
+  const [isLoadingMovies, setIsLoadingMovies] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [submitProgress, setSubmitProgress] = useState(0);
+  const [partyDetails, setPartyDetails] = useState<PartyDetails | null>(null);
   const [isHost, setIsHost] = useState(false);
   const [missingVotes, setMissingVotes] = useState<string[]>([]);
+  const [isMounted, setIsMounted] = useState(false);
 
   // Handle client-side mounting
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  // Fetch party details and movies
+  // Initial setup and validation
   useEffect(() => {
-    const fetchData = async () => {
+    const validateAndSetup = async () => {
       try {
         // Get party details first
         const partyResponse = await fetch(
@@ -66,61 +78,52 @@ const Suite3Page = () => {
         }
 
         const partyData = await partyResponse.json();
+        setPartyDetails(partyData);
         const isHostUser = userId === partyData.participants[0]?.user_id;
         setIsHost(isHostUser);
         
         if (partyData.status !== 'active' || partyData.current_suite !== 3) {
-          throw new Error('Please return to suite 3 lobby or wait for your host to proceed.');
+          router.push(`/suite3/lobby/${params.id}?userId=${userId}`);
+          return;
         }
 
-        // Only host fetches movies
+        // Get movies from localStorage with retry for non-hosts
+        const getMoviesWithRetry = async (retries = 3, delay = 2000) => {
+          for (let i = 0; i < retries; i++) {
+            const savedMovies = window.localStorage.getItem(`party_${params.id}_suite3_movies`);
+            if (savedMovies) {
+              const moviesData = JSON.parse(savedMovies);
+              setMovies(moviesData);
+              setVotes(moviesData.map(movie => ({
+                movie_id: movie.movie_id,
+                vote: null
+              })));
+              setIsLoadingMovies(false);
+              return true;
+            }
+            if (i < retries - 1) {
+              await new Promise(resolve => setTimeout(resolve, delay));
+            }
+          }
+          return false;
+        };
+
         if (isHostUser) {
-          const moviesResponse = await fetch(
-            `${process.env.NEXT_PUBLIC_API_BASE_URL}/party/${params.id}/suite3movies`,
-            {
-              method: 'GET',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-            }
-          );
-
-          if (!moviesResponse.ok) {
-            throw new Error('Failed to fetch movies');
+          // Host should already have movies in localStorage from lobby
+          const success = await getMoviesWithRetry(1, 0); // Single immediate check
+          if (!success) {
+            router.push(`/suite3/lobby/${params.id}?userId=${userId}`);
+            return;
           }
-
-          const moviesData = await moviesResponse.json();
-          window.localStorage.setItem(`party_${params.id}_suite3_movies`, JSON.stringify(moviesData.movies));
-          setMovies(moviesData.movies);
-          setVotes(moviesData.movies.map(movie => ({
-            movie_id: movie.movie_id,
-            vote: null
-          })));
         } else {
-          // Non-host users get movies from localStorage
-          const savedMovies = window.localStorage.getItem(`party_${params.id}_suite3_movies`);
-          if (!savedMovies) {
-            // If no movies found, wait a bit and try again
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            const retryMovies = window.localStorage.getItem(`party_${params.id}_suite3_movies`);
-            if (!retryMovies) {
-              throw new Error('No movies found. Please try refreshing the page.');
-            }
-            const moviesData = JSON.parse(retryMovies);
-            setMovies(moviesData);
-            setVotes(moviesData.map(movie => ({
-              movie_id: movie.movie_id,
-              vote: null
-            })));
-          } else {
-            const moviesData = JSON.parse(savedMovies);
-            setMovies(moviesData);
-            setVotes(moviesData.map(movie => ({
-              movie_id: movie.movie_id,
-              vote: null
-            })));
+          // Non-hosts retry a few times
+          const success = await getMoviesWithRetry();
+          if (!success) {
+            router.push(`/suite3/lobby/${params.id}?userId=${userId}`);
+            return;
           }
         }
+        
       } catch (error) {
         setError(error instanceof Error ? error.message : 'An error occurred');
       } finally {
@@ -128,8 +131,8 @@ const Suite3Page = () => {
       }
     };
 
-    if (params.id && userId) fetchData();
-  }, [params.id, userId]);
+    if (params.id && userId) validateAndSetup();
+  }, [params.id, userId, router]);
 
   // Handle vote change
   const handleVoteChange = (movieId: string, newVote: 'yes' | 'no') => {
@@ -170,13 +173,6 @@ const Suite3Page = () => {
         const vote = votes[i];
         setSubmitProgress((i / votes.length) * 100);
         
-        console.log('Submitting vote with body:', {
-              party_id: params.id,
-              user_id: userId,
-              movie_id: vote.movie_id,
-              vote: vote.vote
-            });
-            
         const response = await fetch(
           `${process.env.NEXT_PUBLIC_API_BASE_URL}/party/${params.id}/vote`,
           {
@@ -200,30 +196,29 @@ const Suite3Page = () => {
 
       // If host, update party status
       if (isHost) {
-        try {
-          await fetch(
-            `${process.env.NEXT_PUBLIC_API_BASE_URL}/party/${params.id}/update`,
-            {
-              method: 'PUT',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                status: 'lobby',
-                current_suite: 4
-              }),
-            }
-          );
-        } catch (error) {
-          console.error('Failed to update party status:', error);
-          // Continue with redirect even if update fails
+        const updateResponse = await fetch(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/party/${params.id}/update`,
+          {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              status: 'lobby',
+              current_suite: 4
+            }),
+          }
+        );
+
+        if (!updateResponse.ok) {
+          throw new Error('Failed to update party status');
         }
       }
 
       // Store the full movie information for the final page
       window.localStorage.setItem(`party_${params.id}_final_movies`, JSON.stringify(movies));
 
-      // Clear the suite3 specific storage
+      // Clear suite3 specific storage
       window.localStorage.removeItem(`party_${params.id}_suite3_movies`);
 
       // Redirect to final lobby
@@ -237,7 +232,7 @@ const Suite3Page = () => {
 
   if (!isMounted) return null;  // Prevent hydration issues
 
-  if (isLoading) {
+  if (isLoading || isLoadingMovies) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#151a24] text-white">
         <div className="text-lg">Loading...</div>
@@ -368,6 +363,4 @@ const Suite3Page = () => {
       </div>
     </div>
   );
-};
-
-export default Suite3Page;
+}
