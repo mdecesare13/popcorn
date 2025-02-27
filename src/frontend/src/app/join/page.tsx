@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Input, Button } from '@/components/ui';
 
 export default function JoinPartyPage() {
   const router = useRouter();
@@ -60,59 +61,71 @@ export default function JoinPartyPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center p-8 bg-[#151a24] text-white">
-      {/* Header */}
-      <h1 className="text-4xl font-bold text-[#FFD700] text-center mb-2">
-        Popcorn
-      </h1>
-      <h2 className="text-5xl font-bold text-white text-center mb-12">
-        Join Party
-      </h2>
+    <main className="relative min-h-screen w-full overflow-hidden font-['SF_Pro_Display',-apple-system,BlinkMacSystemFont,'Segoe_UI',Roboto,sans-serif]">
+      {/* Background Image with Overlay */}
+      <div 
+        className="absolute inset-0 bg-[url('/images/cinema-background.jpg')] bg-cover bg-center"
+        style={{
+          backgroundImage: "linear-gradient(to right, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.8) 100%)"
+        }}
+      />
 
-      {/* Form */}
-      <div className="w-[400px]">
-        <form onSubmit={handleSubmit} className="space-y-8">
-          <div>
-            <label htmlFor="partyId" className="text-2xl font-bold block mb-2">
-              Party ID
-            </label>
-            <input
-              id="partyId"
-              type="text"
-              value={partyId}
-              onChange={(e) => setPartyId(e.target.value)}
-              placeholder="Enter party ID"
-              className="w-full p-4 rounded-lg bg-white text-black text-xl"
-            />
+      {/* Content */}
+      <div className="relative z-10 flex min-h-screen">
+        <div className="flex-1 flex items-center justify-center px-8">
+          <div className="w-full max-w-md">
+            {/* Header */}
+            <div className="text-center mb-16">
+              <h1 className="text-7xl font-medium tracking-tight text-white mb-4">
+                Popcorn
+              </h1>
+              <h2 className="text-2xl font-light text-white/70">
+                Join a Party
+              </h2>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-12">
+              {/* Party ID Input */}
+              <Input
+                label="Party ID"
+                placeholder="Enter party ID"
+                value={partyId}
+                onChange={setPartyId}
+                className="bg-white/5 backdrop-blur-sm border-white/10 text-white placeholder:text-white/30"
+                labelClass="text-white/70 font-light"
+                disabled={isSubmitting}
+              />
+
+              {/* User Name Input */}
+              <Input
+                label="Your Name"
+                placeholder="Enter your name"
+                value={userName}
+                onChange={setUserName}
+                className="bg-white/5 backdrop-blur-sm border-white/10 text-white placeholder:text-white/30"
+                labelClass="text-white/70 font-light"
+                disabled={isSubmitting}
+              />
+
+              {error && (
+                <p className="text-red-400 text-sm text-center font-light">
+                  {error}
+                </p>
+              )}
+
+              {/* Submit Button */}
+              <Button 
+                type="submit"
+                className="w-full bg-white/10 backdrop-blur-sm text-white text-lg font-light py-6 
+                         rounded-xl hover:bg-white/20 transition-all duration-300"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Joining...' : 'Join Party'}
+              </Button>
+            </form>
           </div>
-
-          <div>
-            <label htmlFor="userName" className="text-2xl font-bold block mb-2">
-              User Name
-            </label>
-            <input
-              id="userName"
-              type="text"
-              value={userName}
-              onChange={(e) => setUserName(e.target.value)}
-              placeholder="Enter your name"
-              className="w-full p-4 rounded-lg bg-white text-black text-xl"
-            />
-          </div>
-
-          {error && (
-            <div className="text-red-500 text-center">{error}</div>
-          )}
-
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full bg-[#4169E1] text-white text-xl font-semibold py-4 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
-          >
-            Join Party
-          </button>
-        </form>
+        </div>
       </div>
-    </div>
+    </main>
   );
 }

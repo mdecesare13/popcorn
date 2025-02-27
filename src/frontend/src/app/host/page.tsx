@@ -4,7 +4,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Input, Checkbox, Button } from '@/components/ui';
-const CREATE_PARTY_URL = process.env.NEXT_PUBLIC_CREATE_PARTY_URL;
 
 const STREAMING_SERVICES = [
   'Hulu',
@@ -14,11 +13,7 @@ const STREAMING_SERVICES = [
   'Peacock'
 ];
 
-// API URL from your configuration
-const API_URL = 'https://wt9cfldca5.execute-api.us-east-1.amazonaws.com/v2';
-
 export default function HostPage() {
-  console.log('CREATE_PARTY_URL:', process.env.NEXT_PUBLIC_CREATE_PARTY_URL);
   const router = useRouter();
   const [hostName, setHostName] = useState('');
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
@@ -61,11 +56,8 @@ export default function HostPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateForm()) return;
     
-    if (!validateForm()) {
-      return;
-    }
-  
     setIsSubmitting(true);
     setErrors(prev => ({ ...prev, submit: '' }));
   
@@ -74,14 +66,9 @@ export default function HostPage() {
         throw new Error('CREATE_PARTY_URL is not defined in environment variables');
       }
   
-      const url = process.env.NEXT_PUBLIC_CREATE_PARTY_URL;
-      console.log('Attempting to fetch from:', url);
-  
-      const response = await fetch(url, {
+      const response = await fetch(process.env.NEXT_PUBLIC_CREATE_PARTY_URL, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           host_name: hostName,
           streaming_services: selectedServices
@@ -89,20 +76,15 @@ export default function HostPage() {
       });
   
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Server responded with ${response.status}: ${errorText}`);
+        throw new Error(`Server responded with ${response.status}`);
       }
   
       const data = await response.json();
-      console.log('Created party with ID:', data.party_id);
       router.push(`/host/lobby/${data.party_id}`);
     } catch (error) {
-      console.error('Detailed error:', error);
       setErrors(prev => ({
         ...prev,
-        submit: error instanceof Error 
-          ? `Error: ${error.message}` 
-          : 'Failed to create party - unknown error'
+        submit: error instanceof Error ? error.message : 'Failed to create party'
       }));
     } finally {
       setIsSubmitting(false);
@@ -110,65 +92,86 @@ export default function HostPage() {
   };
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center p-4 bg-gray-900 text-white">
-      <div className="w-full max-w-md space-y-8">
-        <div className="space-y-2">
-          <h1 className="text-4xl font-bold text-center text-yellow-400">
-            Popcorn
-          </h1>
-          <h2 className="text-4xl font-bold text-center">
-            Create Party
-          </h2>
-        </div>
-        
-        <form onSubmit={handleSubmit} className="space-y-8">
-          <Input
-            label="Host Name"
-            placeholder="Enter your name"
-            value={hostName}
-            onChange={(value) => {
-              setHostName(value);
-              if (errors.hostName) {
-                setErrors(prev => ({ ...prev, hostName: '' }));
-              }
-            }}
-            error={errors.hostName}
-            style={{ color: '#063970' }}
-            disabled={isSubmitting}
-          />
+    <main className="relative min-h-screen w-full overflow-hidden font-['SF_Pro_Display',-apple-system,BlinkMacSystemFont,'Segoe_UI',Roboto,sans-serif]">
+      {/* Background Image with Overlay */}
+      <div 
+        className="absolute inset-0 bg-[url('/images/cinema-background.jpg')] bg-cover bg-center"
+        style={{
+          backgroundImage: "linear-gradient(to right, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.8) 100%)"
+        }}
+      />
 
-          <div className="space-y-4">
-            <h3 className="text-2xl font-semibold">
-              Streaming Services
-            </h3>
-            <div className="space-y-3">
-              {STREAMING_SERVICES.map((service) => (
-                <Checkbox
-                  key={service}
-                  label={service}
-                  checked={selectedServices.includes(service)}
-                  onChange={() => handleServiceToggle(service)}
+      {/* Content */}
+      <div className="relative z-10 flex min-h-screen">
+        <div className="flex-1 flex items-center justify-center px-8">
+          <div className="w-full max-w-md">
+            {/* Header */}
+            <div className="text-center mb-16">
+              <h1 className="text-7xl font-medium tracking-tight text-white mb-4">
+                Popcorn
+              </h1>
+              <h2 className="text-2xl font-light text-white/70">
+                Create Your Party
+              </h2>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-12">
+              {/* Host Name Input */}
+              <div className="space-y-2">
+                <Input
+                  label="Host Name"
+                  placeholder="Enter your name"
+                  value={hostName}
+                  onChange={(value) => {
+                    setHostName(value);
+                    if (errors.hostName) setErrors(prev => ({ ...prev, hostName: '' }));
+                  }}
+                  error={errors.hostName}
+                  className="bg-white/5 backdrop-blur-sm border-white/10 text-white placeholder:text-white/30"
+                  labelClass="text-white/70 font-light"
                   disabled={isSubmitting}
                 />
-              ))}
-            </div>
-            {errors.services && (
-              <p className="text-red-500 text-sm mt-1">{errors.services}</p>
-            )}
+              </div>
+
+              {/* Streaming Services */}
+              <div className="space-y-6">
+                <h3 className="text-xl font-light text-white/70">
+                  Streaming Services
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  {STREAMING_SERVICES.map((service) => (
+                    <Checkbox
+                      key={service}
+                      label={service}
+                      checked={selectedServices.includes(service)}
+                      onChange={() => handleServiceToggle(service)}
+                      className="bg-white/5 backdrop-blur-sm hover:bg-white/10 transition-all duration-300"
+                      labelClass="text-white/70 font-light"
+                      disabled={isSubmitting}
+                    />
+                  ))}
+                </div>
+                {errors.services && (
+                  <p className="text-red-400 text-sm font-light">{errors.services}</p>
+                )}
+              </div>
+
+              {errors.submit && (
+                <p className="text-red-400 text-sm text-center font-light">{errors.submit}</p>
+              )}
+
+              {/* Submit Button */}
+              <Button 
+                type="submit"
+                className="w-full bg-white/10 backdrop-blur-sm text-white text-lg font-light py-6 
+                         rounded-xl hover:bg-white/20 transition-all duration-300"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Creating Party...' : 'Create Party'}
+              </Button>
+            </form>
           </div>
-
-          {errors.submit && (
-            <p className="text-red-500 text-sm text-center">{errors.submit}</p>
-          )}
-
-          <Button 
-            type="submit"
-            fullWidth
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? 'Creating Party...' : 'Create Party'}
-          </Button>
-        </form>
+        </div>
       </div>
     </main>
   );

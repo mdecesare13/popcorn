@@ -180,88 +180,118 @@ export default function Suite3LobbyPage() {
     window.location.reload();
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#151a24] text-white">
-        <div className="text-lg">Loading...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#151a24] text-white">
-        <div className="text-red-500">Error: {error}</div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen flex flex-col items-center p-8 bg-[#151a24] text-white">
-      {/* Header */}
-      <h1 className="text-4xl font-bold text-[#FFD700] text-center mb-2">
-        Popcorn
-      </h1>
-      <h2 className="text-5xl font-bold text-white text-center mb-12">
-        Suite 2 Complete!
-      </h2>
-      
-      {/* Party ID */}
-      <div className="text-center mb-12 text-xl font-light italic">
-        Party ID: {params.id}
-      </div>
+    <main className="relative min-h-screen w-full overflow-hidden font-['SF_Pro_Display',-apple-system,BlinkMacSystemFont,'Segoe_UI',Roboto,sans-serif]">
+      {/* Background Image with Overlay */}
+      <div 
+        className="absolute inset-0 bg-[url('/images/cinema-background.jpg')] bg-cover bg-center"
+        style={{
+          backgroundImage: "linear-gradient(to right, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.8) 100%)"
+        }}
+      />
 
-      {/* Conditional Content */}
-      {isHost ? (
-        <div className="w-full max-w-[400px] mb-16">
-          <div className="text-2xl mb-16">
-            Wait to click continue until all members are complete.
+      {/* Content */}
+      <div className="relative z-10 flex min-h-screen">
+        <div className="flex-1 flex items-center justify-center px-8">
+          <div className="w-full max-w-3xl mx-auto">
+            {/* Header */}
+            <div className="text-center mb-16">
+              <h1 className="text-7xl font-medium tracking-tight text-white mb-4">
+                Popcorn
+              </h1>
+              <h2 className="text-2xl font-light text-white/70 mb-2">
+                Phase 2 Complete!
+              </h2>
+              <div className="text-lg font-light text-white/50">
+                Party ID: {params.id}
+              </div>
+            </div>
+
+            {/* Conditional Content */}
+            {isHost ? (
+              <div className="space-y-8 text-center">
+                <p className="text-xl font-light text-white/70">
+                  Wait for all members to complete their ratings before continuing.
+                </p>
+                <button
+                  onClick={handleContinue}
+                  disabled={isUpdating || isLoadingMovies}
+                  className="px-12 py-4 bg-white/10 backdrop-blur-sm text-white text-lg font-light
+                           rounded-xl hover:bg-white/20 transition-all duration-300 disabled:opacity-50"
+                >
+                  {isUpdating ? 'Continuing...' : 'Continue to Final Selection'}
+                </button>
+              </div>
+            ) : (
+              <div className="text-center">
+                <p className="text-xl font-light text-white/50">
+                  Waiting for host to continue...
+                </p>
+              </div>
+            )}
           </div>
-          <button
-            onClick={handleContinue}
-            disabled={isUpdating || isLoadingMovies}
-            className="w-full bg-[#4169E1] text-yellow-400 text-xl font-semibold py-4 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
-          >
-            {isUpdating ? 'Continuing...' : 'Continue!'}
-          </button>
         </div>
-      ) : (
-        <div className="text-2xl font-light italic">
-          Waiting for host to click continue
-        </div>
-      )}
+      </div>
 
       {/* Loading Movies Dialog */}
       <AlertDialog open={isLoadingMovies}>
-        <AlertDialogContent className="bg-[#1a2231] border-gray-700">
+        <AlertDialogContent className="bg-[#151a24]/95 backdrop-blur-sm border-white/10">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">Getting Your Movies Ready</AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-300">
-              Please wait while we select the perfect movies for your group...
+            <AlertDialogTitle className="text-2xl font-medium text-white">
+              Finding Your Perfect Match
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-lg font-light text-white/70">
+              Please wait while we analyze everyone&apos;s ratings...
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="my-4">
-            <Progress value={loadingProgress} className="h-2" />
+          <div className="my-8">
+            <Progress 
+              value={loadingProgress} 
+              className="h-2 bg-white/10"
+              style={{
+                '--progress-foreground': 'linear-gradient(to right, rgb(59 130 246), rgb(96 165 250))'
+              } as React.CSSProperties}
+            />
           </div>
         </AlertDialogContent>
       </AlertDialog>
 
       {/* Timeout Dialog */}
       <AlertDialog open={showTimeout}>
-        <AlertDialogContent className="bg-[#1a2231] border-gray-700">
+        <AlertDialogContent className="bg-[#151a24]/95 backdrop-blur-sm border-white/10">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">Taking Longer Than Expected</AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-300">
-              We're having trouble loading your movies. Please refresh the page to try again.
+            <AlertDialogTitle className="text-2xl font-medium text-white">
+              Taking Longer Than Expected
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-lg font-light text-white/70">
+              We're having trouble finding your final movie. Please try again.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogAction onClick={handleRefresh} className="bg-[#4169E1] text-white hover:bg-[#4169E1]/90">
+            <AlertDialogAction 
+              onClick={handleRefresh}
+              className="px-8 py-3 bg-white/10 backdrop-blur-sm text-white text-base font-light
+                       rounded-lg hover:bg-white/20 transition-all duration-300"
+            >
               Refresh Page
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+
+      {/* Loading State */}
+      {isLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <p className="text-xl font-light text-white">Loading...</p>
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <p className="text-xl font-light text-red-400">{error}</p>
+        </div>
+      )}
+    </main>
   );
 }

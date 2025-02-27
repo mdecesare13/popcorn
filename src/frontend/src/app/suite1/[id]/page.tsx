@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
-import { Checkbox } from "@/components/ui/checkbox";
+import { Checkbox, Button } from "@/components/ui";
 
 const GENRES = [
-  "Action","Drama","Comedy","Thriller","Adventure","Fantasy","Family","Science Fiction","Horror"
+  "Action","Drama","Comedy","Thriller","Adventure",
+  "Fantasy","Family","Science Fiction","Horror"
 ];
 
 const DECADES = ["1970", "1980", "1990", "2000", "2010", "2020"];
@@ -170,124 +171,172 @@ export default function Suite1Page() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#151a24] text-white">
-        <div className="text-lg">Loading...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#151a24] text-white">
-        <div className="text-red-500">Error: {error}</div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen flex flex-col items-center p-8 bg-[#151a24] text-white">
-      {/* Header */}
-      <h1 className="text-4xl font-bold text-[#FFD700] text-center mb-2">
-        Popcorn
-      </h1>
-      <h2 className="text-5xl font-bold text-white text-center mb-4">
-        Phase 1
-      </h2>
-      <p className="text-xl italic mb-12">Tell us your do's and don'ts</p>
+    <main className="relative min-h-screen w-full overflow-hidden font-['SF_Pro_Display',-apple-system,BlinkMacSystemFont,'Segoe_UI',Roboto,sans-serif]">
+      {/* Background Image with Overlay */}
+      <div 
+        className="absolute inset-0 bg-[url('/images/cinema-background.jpg')] bg-cover bg-center"
+        style={{
+          backgroundImage: "linear-gradient(to right, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.8) 100%)"
+        }}
+      />
 
-      {/* Genre Preferences */}
-      <div className="w-full max-w-[600px] mb-8">
-        <h3 className="text-2xl font-bold mb-4">What genres do you prefer? <span className="text-lg font-normal italic">Choose 2</span></h3>
-        <div className="grid grid-cols-3 gap-4">
-          {GENRES.map((genre) => (
-            <div key={`pref-${genre}`} className="flex items-center space-x-2">
-              <Checkbox
-                id={`pref-${genre}`}
-                checked={genrePreferences.includes(genre)}
-                onChange={() => handleGenrePreferenceChange(genre)}
-                disabled={
-                  (genrePreferences.length >= 2 && !genrePreferences.includes(genre)) ||
-                  genreDealbreakers.includes(genre)
-                }
-              />
-              <label htmlFor={`pref-${genre}`} className="text-lg">
-                {genre}
-              </label>
-            </div>
-          ))}
+      {/* Content */}
+      <div className="relative z-10 min-h-screen overflow-auto py-12 px-8">
+        <div className="max-w-4xl mx-auto">
+          {/* Header */}
+          <div className="text-center mb-16">
+            <h1 className="text-7xl font-medium tracking-tight text-white mb-4">
+              Popcorn
+            </h1>
+            <h2 className="text-2xl font-light text-white/70 mb-2">
+              Phase 1: Preferences
+            </h2>
+            <p className="text-lg font-light text-white/50">
+              Tell us what you love (and hate) in movies
+            </p>
+          </div>
+
+          <div className="space-y-16">
+            {/* Genre Preferences */}
+            <section className="bg-white/5 backdrop-blur-sm rounded-2xl p-8">
+              <h3 className="text-xl font-medium text-white/90 mb-6">
+                Favorite Genres <span className="text-white/50 font-light">(Choose 2)</span>
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                {GENRES.map((genre) => (
+                  <div 
+                    key={`pref-${genre}`} 
+                    className={`flex items-center space-x-3 p-3 rounded-xl transition-colors
+                      ${genrePreferences.includes(genre) ? 'bg-white/10' : 'hover:bg-white/5'}
+                      ${(genrePreferences.length >= 2 && !genrePreferences.includes(genre)) || 
+                        genreDealbreakers.includes(genre) ? 'opacity-50' : ''}`}
+                  >
+                    <Checkbox
+                      id={`pref-${genre}`}
+                      checked={genrePreferences.includes(genre)}
+                      onChange={() => handleGenrePreferenceChange(genre)}
+                      disabled={(genrePreferences.length >= 2 && !genrePreferences.includes(genre)) ||
+                               genreDealbreakers.includes(genre)}
+                      className="bg-white/10"
+                      labelClass="text-white/90 font-light"
+                    />
+                    <label htmlFor={`pref-${genre}`} className="text-lg font-light">
+                      {genre}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* Genre Dealbreakers */}
+            <section className="bg-white/5 backdrop-blur-sm rounded-2xl p-8">
+              <h3 className="text-xl font-medium text-white/90 mb-6">
+                Deal Breakers <span className="text-white/50 font-light">(Choose 1)</span>
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                {GENRES.map((genre) => (
+                  <div 
+                    key={`deal-${genre}`} 
+                    className={`flex items-center space-x-3 p-3 rounded-xl transition-colors
+                      ${genreDealbreakers.includes(genre) ? 'bg-red-500/10' : 'hover:bg-white/5'}
+                      ${(genreDealbreakers.length >= 1 && !genreDealbreakers.includes(genre)) || 
+                        genrePreferences.includes(genre) ? 'opacity-50' : ''}`}
+                  >
+                    <Checkbox
+                      id={`deal-${genre}`}
+                      checked={genreDealbreakers.includes(genre)}
+                      onChange={() => handleGenreDealbreakersChange(genre)}
+                      disabled={(genreDealbreakers.length >= 1 && !genreDealbreakers.includes(genre)) ||
+                               genrePreferences.includes(genre)}
+                      className="bg-white/10"
+                      labelClass="text-white/90 font-light"
+                    />
+                    <label htmlFor={`deal-${genre}`} className="text-lg font-light">
+                      {genre}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* Decade Preferences */}
+            <section className="bg-white/5 backdrop-blur-sm rounded-2xl p-8">
+              <h3 className="text-xl font-medium text-white/90 mb-6">
+                Preferred Decades <span className="text-white/50 font-light">(Choose 2)</span>
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                {DECADES.map((decade) => (
+                  <div 
+                    key={`decade-${decade}`} 
+                    className={`flex items-center space-x-3 p-3 rounded-xl transition-colors
+                      ${decadePreferences.includes(decade) ? 'bg-white/10' : 'hover:bg-white/5'}
+                      ${decadePreferences.length >= 2 && !decadePreferences.includes(decade) ? 'opacity-50' : ''}`}
+                  >
+                    <Checkbox
+                      id={`decade-${decade}`}
+                      checked={decadePreferences.includes(decade)}
+                      onChange={() => handleDecadePreferenceChange(decade)}
+                      disabled={decadePreferences.length >= 2 && !decadePreferences.includes(decade)}
+                      className="bg-white/10"
+                      labelClass="text-white/90 font-light"
+                    />
+                    <label htmlFor={`decade-${decade}`} className="text-lg font-light">
+                      {decade}s
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* Year Cutoff */}
+            <section className="bg-white/5 backdrop-blur-sm rounded-2xl p-8">
+              <h3 className="text-xl font-medium text-white/90 mb-6">
+                Oldest Movie You'd Watch
+              </h3>
+              <select
+                className="w-full p-4 bg-white/10 text-white rounded-xl font-light
+                         border-none focus:ring-2 focus:ring-white/20"
+                value={yearCutoff}
+                onChange={(e) => setYearCutoff(e.target.value)}
+              >
+                <option value="" className="bg-gray-900">Select a year...</option>
+                {DECADES.map(decade => (
+                  <option key={decade} value={decade} className="bg-gray-900">
+                    {decade}
+                  </option>
+                ))}
+              </select>
+            </section>
+          </div>
+
+          {/* Error Message */}
+          {error && (
+            <p className="mt-8 text-red-400 text-center font-light">
+              {error}
+            </p>
+          )}
+
+          {/* Submit Button */}
+          <div className="mt-12 flex justify-center">
+            <button
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+              className="px-12 py-4 bg-white/10 backdrop-blur-sm text-white text-lg font-light
+                       rounded-xl hover:bg-white/20 transition-all duration-300 disabled:opacity-50"
+            >
+              {isSubmitting ? 'Submitting...' : 'Continue'}
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Genre Dealbreakers */}
-      <div className="w-full max-w-[600px] mb-8">
-        <h3 className="text-2xl font-bold mb-4">What genres are absolute no-go's? <span className="text-lg font-normal italic">Choose 1</span></h3>
-        <div className="grid grid-cols-3 gap-4">
-          {GENRES.map((genre) => (
-            <div key={`deal-${genre}`} className="flex items-center space-x-2">
-              <Checkbox
-                id={`deal-${genre}`}
-                checked={genreDealbreakers.includes(genre)}
-                onChange={() => handleGenreDealbreakersChange(genre)}
-                disabled={
-                  (genreDealbreakers.length >= 1 && !genreDealbreakers.includes(genre)) ||
-                  genrePreferences.includes(genre)
-                }
-              />
-              <label htmlFor={`deal-${genre}`} className="text-lg">
-                {genre}
-              </label>
-            </div>
-          ))}
+      {/* Loading State */}
+      {isLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <p className="text-xl font-light text-white">Loading...</p>
         </div>
-      </div>
-
-      {/* Decade Preferences */}
-      <div className="w-full max-w-[600px] mb-8">
-        <h3 className="text-2xl font-bold mb-4">Any decades you prefer? <span className="text-lg font-normal italic">Choose 2</span></h3>
-        <div className="grid grid-cols-3 gap-4">
-          {DECADES.map((decade) => (
-            <div key={`decade-${decade}`} className="flex items-center space-x-2">
-              <Checkbox
-                id={`decade-${decade}`}
-                checked={decadePreferences.includes(decade)}
-                onChange={() => handleDecadePreferenceChange(decade)}
-                disabled={decadePreferences.length >= 2 && !decadePreferences.includes(decade)}
-              />
-              <label htmlFor={`decade-${decade}`} className="text-lg">
-                {decade}
-              </label>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Year Cutoff */}
-      <div className="w-full max-w-[600px] mb-12">
-        <h3 className="text-2xl font-bold mb-4">What year would you refuse to watch a movie before?</h3>
-        <select
-          className="w-full p-3 bg-white text-black rounded"
-          value={yearCutoff}
-          onChange={(e) => setYearCutoff(e.target.value)}
-        >
-          <option value="">Select a year...</option>
-          {DECADES.map(decade => (
-            <option key={decade} value={decade}>{decade}</option>
-          ))}
-        </select>
-      </div>
-
-      {/* Submit Button */}
-      <div className="w-[400px]">
-        <button
-          onClick={handleSubmit}
-          disabled={isSubmitting}
-          className="w-full bg-[#FFD700] text-black text-xl font-semibold py-4 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
-        >
-          {isSubmitting ? 'Submitting...' : 'Submit'}
-        </button>
-      </div>
-    </div>
+      )}
+    </main>
   );
 }

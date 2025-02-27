@@ -45,6 +45,7 @@ export default function Suite2Page() {
   const [submitProgress, setSubmitProgress] = useState(0);
   const [partyDetails, setPartyDetails] = useState<PartyDetails | null>(null);
   const [isHost, setIsHost] = useState(false);
+  const [currentMovieIndex, setCurrentMovieIndex] = useState(0);
 
   // Initial setup and validation
   useEffect(() => {
@@ -196,6 +197,49 @@ export default function Suite2Page() {
     }
   };
 
+  // Handle navigation
+  const nextMovie = () => {
+    if (currentMovieIndex < movies.length - 1) {
+      setCurrentMovieIndex(prev => prev + 1);
+    }
+  };
+
+  const previousMovie = () => {
+    if (currentMovieIndex > 0) {
+      setCurrentMovieIndex(prev => prev - 1);
+    }
+  };
+
+  // Handle touch events for swipe
+  const [touchStart, setTouchStart] = useState(0);
+  const [touchEnd, setTouchEnd] = useState(0);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStart(e.touches[0].clientX);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.touches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > 50;
+    const isRightSwipe = distance < -50;
+
+    if (isLeftSwipe && currentMovieIndex < movies.length - 1) {
+      nextMovie();
+    }
+    if (isRightSwipe && currentMovieIndex > 0) {
+      previousMovie();
+    }
+
+    setTouchStart(0);
+    setTouchEnd(0);
+  };
+
   if (isLoading || isLoadingMovies) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#151a24] text-white">
@@ -213,73 +257,190 @@ export default function Suite2Page() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center p-8 bg-[#151a24] text-white">
-      {/* Header */}
-      <h1 className="text-4xl font-bold text-[#FFD700] text-center mb-2">
-        Popcorn
-      </h1>
-      <h2 className="text-5xl font-bold text-white text-center mb-4">
-        Phase 2
-      </h2>
-      <p className="text-xl italic mb-12">Rate the following movies on a scale of 1-10</p>
+    <main className="relative min-h-screen w-full overflow-hidden font-['SF_Pro_Display',-apple-system,BlinkMacSystemFont,'Segoe_UI',Roboto,sans-serif]">
+      {/* Background Image with Overlay */}
+      <div 
+        className="absolute inset-0 bg-[url('/images/cinema-background.jpg')] bg-cover bg-center"
+        style={{
+          backgroundImage: "linear-gradient(to right, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.8) 100%)"
+        }}
+      />
 
+      {/* Content */}
+      <div className="relative z-10 min-h-screen flex flex-col items-center py-12 px-8">
+        {/* Header */}
+        <div className="text-center mb-16">
+          <h1 className="text-7xl font-medium tracking-tight text-white mb-4">
+            Popcorn
+          </h1>
+          <h2 className="text-2xl font-light text-white/70 mb-2">
+            Phase 2: Rate Movies
+          </h2>
+          <p className="text-lg font-light text-white/50">
+            Rate each movie from 1 to 10
+          </p>
+        </div>
+
+        {/* Movie Carousel */}
+        <div className="w-full max-w-xl mx-auto mb-16 px-12">
+          {/* Navigation Arrows */}
+          <div className="relative flex items-center justify-center">
+            <button
+              onClick={previousMovie}
+              disabled={currentMovieIndex === 0}
+              className="absolute -left-12 z-10 p-2 text-white/70 hover:text-white disabled:opacity-30 transition-opacity"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-8 h-8">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+              </svg>
+            </button>
+
+            {/* Carousel Container */}
+            <div className="relative w-full overflow-visible">
+              {/* Previous Movie Preview - only show if not first movie */}
+              {currentMovieIndex > 0 && (
+                <div 
+                  className="absolute right-[100%] top-0 w-full aspect-[2/3] -mr-32 scale-90 opacity-30 blur-sm transition-all duration-500"
+                >
+                  <img 
+                    src={movies[currentMovieIndex - 1]?.image_url} 
+                    alt="Previous movie"
+                    className="w-full h-full object-cover rounded-2xl"
+                  />
+                </div>
+              )}
+
+              {/* Next Movie Preview - only show if not last movie */}
+              {currentMovieIndex < movies.length - 1 && (
+                <div 
+                  className="absolute left-[100%] top-0 w-full aspect-[2/3] -ml-32 scale-90 opacity-30 blur-sm transition-all duration-500"
+                >
+                  <img 
+                    src={movies[currentMovieIndex + 1]?.image_url} 
+                    alt="Next movie"
+                    className="w-full h-full object-cover rounded-2xl"
+                  />
+                </div>
+              )}
+
+              {/* Current Movie Card */}
+              <div 
+                className="w-full aspect-[2/3] rounded-2xl overflow-hidden shadow-2xl transform-gpu transition-all duration-500"
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+              >
+                <div className="relative h-full">
+                  <img 
+                    src={movies[currentMovieIndex]?.image_url} 
+                    alt={movies[currentMovieIndex]?.title}
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
+
+                  {/* Movie Info Overlay */}
+                  <div className="absolute inset-x-0 bottom-0 p-6 space-y-6">
+                    <div>
+                      <h3 className="text-2xl font-medium text-white drop-shadow-lg mb-2">
+                        {movies[currentMovieIndex]?.title}
+                      </h3>
+                      <p className="text-lg font-light text-white/70">
+                        {movies[currentMovieIndex]?.year}
+                      </p>
+                    </div>
+
+                    <p className="text-sm font-light text-white/70 line-clamp-3">
+                      {movies[currentMovieIndex]?.summary}
+                    </p>
+
+                    {/* Rating Control */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-base font-light text-white/70">Rating</span>
+                        <span className="text-3xl font-medium text-white">
+                          {ratings[currentMovieIndex]?.rating || 5}
+                        </span>
+                      </div>
+                      <Slider
+                        min={1}
+                        max={10}
+                        step={1}
+                        value={[ratings[currentMovieIndex]?.rating || 5]}
+                        onValueChange={([value]) => handleRatingChange(movies[currentMovieIndex].movie_id, value)}
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={nextMovie}
+              disabled={currentMovieIndex === movies.length - 1}
+              className="absolute -right-12 z-10 p-2 text-white/70 hover:text-white disabled:opacity-30 transition-opacity"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-8 h-8">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Progress Dots */}
+          <div className="flex justify-center space-x-2 mt-6">
+            {movies.map((_, index) => (
+              <div
+                key={index}
+                className={`w-2 h-2 rounded-full transition-colors duration-200 
+                  ${index === currentMovieIndex ? 'bg-white' : 'bg-white/30'}`}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Submit Button */}
+        <button
+          onClick={handleSubmit}
+          disabled={isSubmitting}
+          className="px-12 py-4 bg-white/10 backdrop-blur-sm text-white text-lg font-light
+                   rounded-xl hover:bg-white/20 transition-all duration-300 disabled:opacity-50"
+        >
+          {isSubmitting ? 'Submitting...' : 'Submit Ratings'}
+        </button>
+      </div>
+
+      {/* Loading State */}
+      {(isLoading || isLoadingMovies) && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <p className="text-xl font-light text-white">Loading...</p>
+        </div>
+      )}
+
+      {/* Submission Progress Overlay */}
       {isSubmitting && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-8 rounded-lg max-w-md w-full">
-            <h3 className="text-xl mb-4 text-black">Submitting Ratings...</h3>
-            <Progress value={submitProgress} className="mb-4" />
-            <p className="text-sm text-gray-600">
+        <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-[#151a24]/95 backdrop-blur-sm border-white/10 p-8 rounded-2xl max-w-md w-full">
+            <h3 className="text-xl font-medium text-white mb-4">Submitting Ratings...</h3>
+            <Progress 
+              value={submitProgress} 
+              className="mb-4"
+              style={{
+                '--progress-foreground': 'linear-gradient(to right, rgb(59 130 246), rgb(96 165 250))'
+              } as React.CSSProperties}
+            />
+            <p className="text-sm font-light text-white/50">
               Submitting rating {Math.ceil((submitProgress / 100) * ratings.length)} of {ratings.length}
             </p>
           </div>
         </div>
       )}
 
-      <div className="w-full max-w-4xl space-y-12">
-        {movies.map((movie, index) => (
-          <div key={movie.movie_id} className="bg-white bg-opacity-10 rounded-lg p-6">
-            <div className="flex flex-col md:flex-row gap-6">
-              <div className="md:w-1/3">
-                <img 
-                  src={movie.image_url} 
-                  alt={movie.title}
-                  className="w-full rounded-lg shadow-md"
-                />
-              </div>
-              
-              <div className="md:w-2/3">
-                <h3 className="text-2xl font-bold mb-2 text-white">{movie.title}</h3>
-                <p className="text-gray-400 mb-4">{movie.year}</p>
-                <p className="text-gray-300 mb-6">{movie.summary}</p>
-                
-                <div className="space-y-4">
-                  <label className="block text-sm font-medium text-gray-300">
-                    Your Rating: {ratings[index]?.rating || 5}
-                  </label>
-                  <Slider
-                    min={1}
-                    max={10}
-                    step={1}
-                    value={[ratings[index]?.rating || 5]}
-                    onValueChange={([value]) => handleRatingChange(movie.movie_id, value)}
-                    className="w-full"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="mt-12 w-[400px]">
-        <button
-          onClick={handleSubmit}
-          disabled={isSubmitting}
-          className="w-full bg-[#FFD700] text-black text-xl font-semibold py-4 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
-        >
-          {isSubmitting ? 'Submitting...' : 'Submit Ratings'}
-        </button>
-      </div>
-    </div>
+      {/* Error State */}
+      {error && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <p className="text-xl font-light text-red-400">{error}</p>
+        </div>
+      )}
+    </main>
   );
 }

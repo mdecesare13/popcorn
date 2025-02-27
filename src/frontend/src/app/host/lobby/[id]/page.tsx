@@ -123,7 +123,7 @@ export default function HostLobbyPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#151a24] text-white">
+      <div className="min-h-screen flex items-center justify-center bg-black text-white">
         <div className="text-lg">Loading lobby...</div>
       </div>
     );
@@ -131,62 +131,86 @@ export default function HostLobbyPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#151a24] text-white">
+      <div className="min-h-screen flex items-center justify-center bg-black text-white">
         <div className="text-red-500">Error: {error}</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center p-8 bg-[#151a24] text-white">
-      {/* Header */}
-      <h1 className="text-4xl font-bold text-[#FFD700] text-center mb-2">
-        Popcorn
-      </h1>
-      <h2 className="text-5xl font-bold text-white text-center mb-12">
-        Lobby
-      </h2>
-      
-      {/* Party ID */}
-      <div className="text-center mb-2 text-xl font-light italic">
-        Party ID: {params.id}
-      </div>
-      
-      {/* Invite Button */}
-      <div className="text-center mb-10">
-        <button 
-          onClick={handleInvite}
-          className="flex items-center justify-center space-x-2 bg-green-500 text-black font-medium py-2 px-4 rounded-lg hover:bg-green-400 transition-colors"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-            <path d="M1.5 8.67v8.58a3 3 0 003 3h15a3 3 0 003-3V8.67l-8.928 5.493a3 3 0 01-3.144 0L1.5 8.67z" />
-            <path d="M22.5 6.908V6.75a3 3 0 00-3-3h-15a3 3 0 00-3 3v.158l9.714 5.978a1.5 1.5 0 001.572 0L22.5 6.908z" />
-          </svg>
-          <span>Send Invite</span>
-        </button>
-      </div>
+    <div className="relative min-h-screen w-full overflow-hidden font-['SF_Pro_Display',-apple-system,BlinkMacSystemFont,'Segoe_UI',Roboto,sans-serif]">
+      {/* Background Image with Overlay */}
+      <div 
+        className="absolute inset-0 bg-[url('/images/cinema-background.jpg')] bg-cover bg-center"
+        style={{
+          backgroundImage: "linear-gradient(to right, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.8) 100%)"
+        }}
+      />
 
-      {/* Members Section */}
-      <div className="w-full max-w-[400px] mb-16">
-        <h3 className="text-3xl font-bold mb-6">Members</h3>
-        <div className="space-y-4">
-          {partyDetails?.participants.map((participant, index) => (
-            <div key={participant.user_id} className="text-2xl font-light">
-              {participant.name} {index === 0 ? '(host)' : ''}
+      {/* Content */}
+      <div className="relative z-10 flex h-screen">
+        {/* Main Content Container */}
+        <div className="flex-1 flex items-center justify-center px-8">
+          <div className="w-full max-w-3xl mx-auto">
+            {/* Header */}
+            <div className="text-center mb-16">
+              <h1 className="text-7xl font-medium tracking-tight text-white mb-4">
+                Popcorn
+              </h1>
+              <div className="flex items-center justify-center space-x-6 text-gray-300">
+                <span className="text-xl font-light">Party ID: {params.id}</span>
+                <button 
+                  onClick={handleInvite}
+                  className="flex items-center space-x-2 bg-white/5 backdrop-blur-sm px-6 py-2 rounded-full 
+                           hover:bg-white/10 transition-all duration-300"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                    <path d="M1.5 8.67v8.58a3 3 0 003 3h15a3 3 0 003-3V8.67l-8.928 5.493a3 3 0 01-3.144 0L1.5 8.67z" />
+                    <path d="M22.5 6.908V6.75a3 3 0 00-3-3h-15a3 3 0 00-3 3v.158l9.714 5.978a1.5 1.5 0 001.572 0L22.5 6.908z" />
+                  </svg>
+                  <span className="font-light">Invite Friends</span>
+                </button>
+              </div>
             </div>
-          ))}
-        </div>
-      </div>
 
-      {/* Start Button */}
-      <div className="w-[400px]">
-        <button
-          onClick={handleStart}
-          disabled={isStarting}
-          className="w-full bg-[#4169E1] text-white text-xl font-semibold py-4 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
-        >
-          {isStarting ? 'Starting...' : 'Start!'}
-        </button>
+            {/* Members List */}
+            <div className="mb-16">
+              <h2 className="text-2xl font-medium text-white/90 text-center mb-8">Waiting Room</h2>
+              <div className="space-y-4 max-w-lg mx-auto">
+                {partyDetails?.participants.map((participant, index) => (
+                  <div 
+                    key={participant.user_id} 
+                    className="flex items-center space-x-4 text-xl text-white/80 bg-white/5 backdrop-blur-sm 
+                             rounded-xl p-4 transition-all duration-300 hover:bg-white/10"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center font-medium">
+                      {participant.name[0].toUpperCase()}
+                    </div>
+                    <span className="font-light">{participant.name}</span>
+                    {index === 0 && (
+                      <span className="ml-auto px-3 py-1 rounded-full bg-yellow-500/10 text-yellow-300/90 text-sm font-medium">
+                        Host
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Start Button */}
+            <div className="flex justify-center">
+              <button
+                onClick={handleStart}
+                disabled={isStarting}
+                className="w-64 bg-gradient-to-r from-blue-600 to-blue-500 text-white text-xl font-medium py-4 
+                         rounded-xl hover:from-blue-700 hover:to-blue-600 transition-all duration-300 
+                         disabled:opacity-50 shadow-[0_0_20px_rgba(59,130,246,0.3)]"
+              >
+                {isStarting ? 'Starting...' : 'Start Watching'}
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

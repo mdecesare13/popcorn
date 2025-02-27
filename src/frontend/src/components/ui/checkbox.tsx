@@ -1,28 +1,34 @@
-type CheckboxProps = {
-    label: string;
-    checked: boolean;
-    onChange: (checked: boolean) => void;
-    id?: string;
-  } & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'>;
-  
-  export function Checkbox({
-    label,
-    checked,
-    onChange,
-    id,
-    ...props
-  }: CheckboxProps) {
-    return (
-      <label className="flex items-center space-x-3 cursor-pointer">
-        <input
-          type="checkbox"
-          checked={checked}
-          onChange={(e) => onChange(e.target.checked)}
-          className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-          id={id}
-          {...props}
-        />
-        <span className="text-lg">{label}</span>
-      </label>
-    );
-  }
+import { cn } from "@/lib/utils";
+
+interface CheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  wrapperClassName?: string;
+  labelClass?: string;
+}
+
+export function Checkbox({
+  label,
+  checked,
+  onChange,
+  className,
+  wrapperClassName,
+  labelClass,
+  ...props
+}: CheckboxProps) {
+  return (
+    <label className={cn("flex items-center space-x-3 cursor-pointer", wrapperClassName)}>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className={cn("form-checkbox h-5 w-5", className)}
+        {...props}
+      />
+      <span className={cn("text-sm", labelClass)}>
+        {label}
+      </span>
+    </label>
+  );
+}

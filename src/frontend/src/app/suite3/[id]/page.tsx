@@ -53,6 +53,9 @@ export default function Suite3Page() {
   const [missingVotes, setMissingVotes] = useState<string[]>([]);
   const [isMounted, setIsMounted] = useState(false);
 
+  // Add new state for animation
+  const [currentMovieIndex, setCurrentMovieIndex] = useState(0);
+
   // Handle client-side mounting
   useEffect(() => {
     setIsMounted(true);
@@ -230,6 +233,19 @@ export default function Suite3Page() {
     }
   };
 
+  // Navigation functions
+  const nextMovie = () => {
+    if (currentMovieIndex < movies.length - 1) {
+      setCurrentMovieIndex(prev => prev + 1);
+    }
+  };
+
+  const previousMovie = () => {
+    if (currentMovieIndex > 0) {
+      setCurrentMovieIndex(prev => prev - 1);
+    }
+  };
+
   if (!isMounted) return null;  // Prevent hydration issues
 
   if (isLoading || isLoadingMovies) {
@@ -249,118 +265,138 @@ export default function Suite3Page() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center p-8 bg-[#151a24] text-white">
-      {/* Header */}
-      <h1 className="text-4xl font-bold text-[#FFD700] text-center mb-2">
-        Popcorn
-      </h1>
-      <h2 className="text-5xl font-bold text-white text-center mb-4">
-        Suite 3
-      </h2>
-      <p className="text-xl italic mb-12">Time for your blind vote! Vote yes or no on the below movies?</p>
+    <main className="relative min-h-screen w-full overflow-hidden font-['SF_Pro_Display',-apple-system,BlinkMacSystemFont,'Segoe_UI',Roboto,sans-serif]">
+      {/* Background Image with Overlay */}
+      <div 
+        className="absolute inset-0 bg-[url('/images/cinema-background.jpg')] bg-cover bg-center"
+        style={{
+          backgroundImage: "linear-gradient(to right, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.8) 100%)"
+        }}
+      />
 
-      {isSubmitting && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-8 rounded-lg max-w-md w-full">
-            <h3 className="text-xl mb-4 text-black">Submitting Votes...</h3>
-            <Progress value={submitProgress} className="mb-4" />
-            <p className="text-sm text-gray-600">
-              Submitting vote {Math.ceil((submitProgress / 100) * votes.length)} of {votes.length}
-            </p>
-          </div>
+      {/* Content */}
+      <div className="relative z-10 min-h-screen flex flex-col items-center py-12 px-8">
+        {/* Header */}
+        <div className="text-center mb-16">
+          <h1 className="text-7xl font-medium tracking-tight text-white mb-4">
+            Popcorn
+          </h1>
+          <h2 className="text-2xl font-light text-white/70 mb-2">
+            Final Phase: Blind Vote
+          </h2>
+          <p className="text-lg font-light text-white/50">
+            Would you watch this movie?
+          </p>
         </div>
-      )}
 
-      <div className="w-full max-w-4xl space-y-12">
-        {movies.map((movie, index) => {
-          const needsVote = missingVotes.includes(movie.movie_id);
-          return (
-            <div 
-              key={movie.movie_id}
-              id={`movie-${movie.movie_id}`}
-              className={`bg-white bg-opacity-10 rounded-lg p-6 transition-all ${
-                needsVote ? 'ring-2 ring-red-500 ring-opacity-70 shadow-lg shadow-red-500/20' : ''
-              }`}
+        {/* Movie Carousel */}
+        <div className="w-full max-w-xl mx-auto mb-16 px-12">
+          {/* Navigation Arrows */}
+          <div className="relative flex items-center justify-center">
+            <button
+              onClick={previousMovie}
+              disabled={currentMovieIndex === 0}
+              className="absolute -left-12 z-10 p-2 text-white/70 hover:text-white disabled:opacity-30 transition-opacity"
             >
-              <div className="flex flex-col md:flex-row gap-6">
-                <div className="md:w-1/3">
-                  <div 
-                    className="w-full rounded-lg shadow-md overflow-hidden relative aspect-[2/3]"
-                    style={{
-                      background: `url(${movie.image_url})`,
-                      backgroundSize: 'cover',
-                      backgroundPosition: 'center',
-                      filter: 'blur(30px)'
-                    }}
-                  />
-                </div>
-                
-                <div className="md:w-2/3">
-                  <p className="text-gray-400 mb-4">{movie.year}</p>
-                  <p className="text-gray-300 mb-6">{movie.blind_summary}</p>
-                  
-                  <div className="space-y-4">
-                    {/* Ratings */}
-                    <div className="space-y-2">
-                      {movie.ratings.map((rating, i) => (
-                        <div key={i} className="text-sm text-gray-300">
-                          {rating.source}: {rating.score}/{rating.max_score}
-                        </div>
-                      ))}
-                    </div>
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-8 h-8">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+              </svg>
+            </button>
 
-                    {/* Vote Radio Buttons */}
-                    <div className={needsVote ? 'animate-pulse' : ''}>
-                      <RadioGroup 
-                        value={votes[index]?.vote || ''}
-                        onValueChange={(value: 'yes' | 'no') => handleVoteChange(movie.movie_id, value)}
-                        className="flex gap-6"
-                      >
-                        <div className="flex items-center gap-2">
-                          <RadioGroupItem 
-                            value="yes" 
-                            id={`yes-${movie.movie_id}`}
-                            className="transition-transform duration-200 data-[state=checked]:scale-150 data-[state=checked]:bg-green-500"
-                          />
-                          <Label 
-                            htmlFor={`yes-${movie.movie_id}`}
-                            className="text-white"
-                          >
-                            Yes
-                          </Label>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <RadioGroupItem 
-                            value="no" 
-                            id={`no-${movie.movie_id}`}
-                            className="transition-transform duration-200 data-[state=checked]:scale-150 data-[state=checked]:bg-red-500"
-                          />
-                          <Label 
-                            htmlFor={`no-${movie.movie_id}`}
-                            className="text-white"
-                          >
-                            No
-                          </Label>
-                        </div>
-                      </RadioGroup>
-                    </div>
+            {/* Movie Card */}
+            <div className="w-full aspect-[2/3] rounded-2xl overflow-hidden shadow-2xl">
+              <div className="relative h-full">
+                {/* Blurred Movie Image */}
+                <div 
+                  className="absolute inset-0 blur-3xl"
+                  style={{
+                    backgroundImage: `url(${movies[currentMovieIndex]?.image_url})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center'
+                  }}
+                />
+                <div className="absolute inset-0 bg-black/60" />
+
+                {/* Content */}
+                <div className="relative h-full flex flex-col justify-between p-8">
+                  {/* Movie Info */}
+                  <div>
+                    <p className="text-2xl font-medium text-white mb-2">
+                      {movies[currentMovieIndex]?.year}
+                    </p>
+                    <p className="text-lg font-light text-white/80 leading-relaxed">
+                      {movies[currentMovieIndex]?.blind_summary}
+                    </p>
+                  </div>
+
+                  {/* Ratings */}
+                  <div className="space-y-2">
+                    {movies[currentMovieIndex]?.ratings.map((rating, i) => (
+                      <div key={i} className="flex justify-between items-center text-white/70">
+                        <span className="font-light">{rating.source}</span>
+                        <span className="font-medium">{rating.score}/{rating.max_score}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Vote Buttons */}
+                  <div className="flex gap-4 mt-8">
+                    <button
+                      onClick={() => handleVoteChange(movies[currentMovieIndex].movie_id, 'no')}
+                      className={`flex-1 py-4 rounded-xl font-medium transition-all duration-300 
+                        ${votes[currentMovieIndex]?.vote === 'no' 
+                          ? 'bg-red-500 text-white' 
+                          : 'bg-white/10 text-white hover:bg-red-500/20'}`}
+                    >
+                      No
+                    </button>
+                    <button
+                      onClick={() => handleVoteChange(movies[currentMovieIndex].movie_id, 'yes')}
+                      className={`flex-1 py-4 rounded-xl font-medium transition-all duration-300 
+                        ${votes[currentMovieIndex]?.vote === 'yes' 
+                          ? 'bg-green-500 text-white' 
+                          : 'bg-white/10 text-white hover:bg-green-500/20'}`}
+                    >
+                      Yes
+                    </button>
                   </div>
                 </div>
               </div>
             </div>
-          );
-        })}
-      </div>
 
-      <div className="mt-12 w-[400px]">
+            <button
+              onClick={nextMovie}
+              disabled={currentMovieIndex === movies.length - 1}
+              className="absolute -right-12 z-10 p-2 text-white/70 hover:text-white disabled:opacity-30 transition-opacity"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-8 h-8">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Progress Dots */}
+          <div className="flex justify-center space-x-2 mt-6">
+            {movies.map((_, index) => (
+              <div
+                key={index}
+                className={`w-2 h-2 rounded-full transition-colors duration-200 
+                  ${index === currentMovieIndex ? 'bg-white' : 'bg-white/30'}`}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Submit Button */}
         <button
           onClick={handleSubmit}
           disabled={isSubmitting}
-          className="w-full bg-[#FFD700] text-black text-xl font-semibold py-4 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+          className="px-12 py-4 bg-white/10 backdrop-blur-sm text-white text-lg font-light
+                   rounded-xl hover:bg-white/20 transition-all duration-300 disabled:opacity-50"
         >
           {isSubmitting ? 'Submitting...' : 'Submit Votes'}
         </button>
       </div>
-    </div>
+    </main>
   );
 }
