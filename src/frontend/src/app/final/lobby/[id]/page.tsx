@@ -206,12 +206,12 @@ const FinalLobbyPage = () => {
                       <div className="flex items-center space-x-2">
                         <span className="w-2 h-2 rounded-full bg-green-500" />
                         <span className="text-white/70">
-                          {movie.yes_votes} Yes ({yesPercentage.toFixed(1)}%)
+                          {movie.yes_votes} Yes
                         </span>
                       </div>
                       <div className="flex items-center space-x-2">
                         <span className="text-white/70">
-                          {movie.no_votes} No ({noPercentage.toFixed(1)}%)
+                          {movie.no_votes} No
                         </span>
                         <span className="w-2 h-2 rounded-full bg-red-500" />
                       </div>
@@ -237,12 +237,13 @@ const FinalLobbyPage = () => {
           })}
         </div>
 
-        {/* Movie Details Modal - Update z-index */}
+        {/* Movie Details Modal */}
         <div className="relative z-50">
           <MovieDetailsDialog
             movie={selectedMovie}
             isOpen={isModalOpen}
             onClose={() => setIsModalOpen(false)}
+            className="max-w-lg w-[calc(100%-2rem)]"
           />
         </div>
       </div>

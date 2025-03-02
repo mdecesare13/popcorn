@@ -4,6 +4,15 @@ import { useEffect, useState } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { Slider } from '@/components/ui/slider';
 import { Progress } from '@/components/ui/progress';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
 
 // Types
 interface Movie {
@@ -46,6 +55,7 @@ export default function Suite2Page() {
   const [partyDetails, setPartyDetails] = useState<PartyDetails | null>(null);
   const [isHost, setIsHost] = useState(false);
   const [currentMovieIndex, setCurrentMovieIndex] = useState(0);
+  const [selectedMovieForDetails, setSelectedMovieForDetails] = useState<Movie | null>(null);
 
   // Initial setup and validation
   useEffect(() => {
@@ -240,6 +250,10 @@ export default function Suite2Page() {
     setTouchEnd(0);
   };
 
+  const handleMovieClick = (movie: Movie) => {
+    setSelectedMovieForDetails(movie);
+  };
+
   if (isLoading || isLoadingMovies) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#151a24] text-white">
@@ -329,6 +343,7 @@ export default function Suite2Page() {
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
+                onClick={() => handleMovieClick(movies[currentMovieIndex])}
               >
                 <div className="relative h-full">
                   <img 
@@ -354,21 +369,23 @@ export default function Suite2Page() {
                     </p>
 
                     {/* Rating Control */}
-                    <div className="space-y-3">
+                    <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-between">
                         <span className="text-base font-light text-white/70">Rating</span>
                         <span className="text-3xl font-medium text-white">
                           {ratings[currentMovieIndex]?.rating || 5}
                         </span>
                       </div>
-                      <Slider
-                        min={1}
-                        max={10}
-                        step={1}
-                        value={[ratings[currentMovieIndex]?.rating || 5]}
-                        onValueChange={([value]) => handleRatingChange(movies[currentMovieIndex].movie_id, value)}
-                        className="w-full"
-                      />
+                      <div onTouchStart={(e) => e.stopPropagation()}>
+                        <Slider
+                          min={1}
+                          max={10}
+                          step={1}
+                          value={[ratings[currentMovieIndex]?.rating || 5]}
+                          onValueChange={([value]) => handleRatingChange(movies[currentMovieIndex].movie_id, value)}
+                          className="w-full"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -418,8 +435,8 @@ export default function Suite2Page() {
 
       {/* Submission Progress Overlay */}
       {isSubmitting && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-[#151a24]/95 backdrop-blur-sm border-white/10 p-8 rounded-2xl max-w-md w-full">
+        <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-50">
+          <div className="bg-[#151a24]/95 backdrop-blur-sm border-white/10 p-8 rounded-2xl max-w-md w-[calc(100%-2rem)]">
             <h3 className="text-xl font-medium text-white mb-4">Submitting Ratings...</h3>
             <Progress 
               value={submitProgress} 
@@ -441,6 +458,37 @@ export default function Suite2Page() {
           <p className="text-xl font-light text-red-400">{error}</p>
         </div>
       )}
+
+      {/* Movie Details Dialog */}
+      <div className="relative z-50">
+        <AlertDialog 
+          open={selectedMovieForDetails !== null} 
+          onOpenChange={() => setSelectedMovieForDetails(null)}
+        >
+          <AlertDialogContent className="bg-[#151a24]/95 backdrop-blur-sm border-white/10 max-w-lg w-[calc(100%-2rem)]">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="text-2xl font-medium text-white">
+                {selectedMovieForDetails?.title}
+              </AlertDialogTitle>
+              <div className="text-lg font-light text-white/70 mb-2">
+                {selectedMovieForDetails?.year}
+              </div>
+              <AlertDialogDescription className="text-base font-light text-white/70 whitespace-pre-wrap">
+                {selectedMovieForDetails?.summary}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogAction 
+                onClick={() => setSelectedMovieForDetails(null)}
+                className="px-8 py-3 bg-white/10 backdrop-blur-sm text-white text-base font-light
+                         rounded-lg hover:bg-white/20 transition-all duration-300"
+              >
+                Back to Rating
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
     </main>
   );
 }

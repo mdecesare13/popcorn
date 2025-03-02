@@ -3,6 +3,13 @@
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { Checkbox, Button } from "@/components/ui";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const GENRES = [
   "Action","Drama","Comedy","Thriller","Adventure",
@@ -294,19 +301,24 @@ export default function Suite1Page() {
               <h3 className="text-xl font-medium text-white/90 mb-6">
                 Oldest Movie You'd Watch
               </h3>
-              <select
-                className="w-full p-4 bg-white/10 text-white rounded-xl font-light
-                         border-none focus:ring-2 focus:ring-white/20"
-                value={yearCutoff}
-                onChange={(e) => setYearCutoff(e.target.value)}
-              >
-                <option value="" className="bg-gray-900">Select a year...</option>
-                {DECADES.map(decade => (
-                  <option key={decade} value={decade} className="bg-gray-900">
-                    {decade}
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                <Select value={yearCutoff} onValueChange={setYearCutoff}>
+                  <SelectTrigger className="w-full bg-white/10 text-white border-none">
+                    <SelectValue placeholder="Select a year..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#1a1f2c] border-white/10 text-white">
+                    {DECADES.map(decade => (
+                      <SelectItem 
+                        key={decade} 
+                        value={decade}
+                        className="hover:bg-white/5 focus:bg-white/5 focus:text-white"
+                      >
+                        {decade}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </section>
           </div>
 

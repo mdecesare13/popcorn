@@ -318,29 +318,29 @@ export default function Suite3Page() {
                 <div className="absolute inset-0 bg-black/60" />
 
                 {/* Content */}
-                <div className="relative h-full flex flex-col justify-between p-8">
-                  {/* Movie Info */}
-                  <div>
+                <div className="relative h-full flex flex-col p-8">
+                  {/* Movie Info - Scrollable Area */}
+                  <div className="flex-1 overflow-y-auto mb-8">
                     <p className="text-2xl font-medium text-white mb-2">
                       {movies[currentMovieIndex]?.year}
                     </p>
-                    <p className="text-lg font-light text-white/80 leading-relaxed">
+                    <p className="text-lg font-light text-white/80 leading-relaxed line-clamp-[12]">
                       {movies[currentMovieIndex]?.blind_summary}
                     </p>
+
+                    {/* Ratings */}
+                    <div className="space-y-2 mt-4">
+                      {movies[currentMovieIndex]?.ratings.map((rating, i) => (
+                        <div key={i} className="flex justify-between items-center text-white/70">
+                          <span className="font-light truncate mr-4">{rating.source}</span>
+                          <span className="font-medium whitespace-nowrap">{rating.score}/{rating.max_score}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
 
-                  {/* Ratings */}
-                  <div className="space-y-2">
-                    {movies[currentMovieIndex]?.ratings.map((rating, i) => (
-                      <div key={i} className="flex justify-between items-center text-white/70">
-                        <span className="font-light">{rating.source}</span>
-                        <span className="font-medium">{rating.score}/{rating.max_score}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Vote Buttons */}
-                  <div className="flex gap-4 mt-8">
+                  {/* Vote Buttons - Fixed at Bottom */}
+                  <div className="flex gap-4 mt-auto">
                     <button
                       onClick={() => handleVoteChange(movies[currentMovieIndex].movie_id, 'no')}
                       className={`flex-1 py-4 rounded-xl font-medium transition-all duration-300 

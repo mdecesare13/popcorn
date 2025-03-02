@@ -235,7 +235,7 @@ export default function Suite2LobbyPage() {
 
       {/* Loading Movies Dialog */}
       <AlertDialog open={isLoadingMovies}>
-        <AlertDialogContent className="bg-[#151a24]/95 backdrop-blur-sm border-white/10">
+        <AlertDialogContent className="bg-[#151a24]/95 backdrop-blur-sm border-white/10 max-w-lg w-[calc(100%-2rem)]">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-2xl font-medium text-white">
               Finding Your Perfect Movies
