@@ -28,17 +28,6 @@ interface Rating {
   rating: number;
 }
 
-interface PartyDetails {
-  party_id: string;
-  status: string;
-  current_suite: number;
-  participants: {
-    user_id: string;
-    name: string;
-    status: string;
-  }[];
-}
-
 export default function Suite2Page() {
   const params = useParams();
   const searchParams = useSearchParams();

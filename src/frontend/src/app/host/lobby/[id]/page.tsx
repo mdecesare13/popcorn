@@ -29,7 +29,7 @@ export default function HostLobbyPage() {
       await navigator.clipboard.writeText(params.id as string);
       setCopyFeedback(true);
       setTimeout(() => setCopyFeedback(false), 2000);
-    } catch (_) {
+    } catch {
       // Fallback for browsers that don't support clipboard API
       const textArea = document.createElement('textarea');
       textArea.value = params.id as string;

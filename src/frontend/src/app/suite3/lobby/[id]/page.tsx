@@ -264,7 +264,7 @@ export default function Suite3LobbyPage() {
               Taking Longer Than Expected
             </AlertDialogTitle>
             <AlertDialogDescription className="text-lg font-light text-white/70">
-              We're having trouble finding your final movie. Please try again.
+              We&apos;re having trouble finding your final movie. Please try again.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

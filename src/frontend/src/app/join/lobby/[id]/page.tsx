@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { Button } from '@/components/ui';
 
 interface Participant {
   name: string;
@@ -83,7 +82,7 @@ export default function MemberLobbyPage() {
       navigator.share({
         title: 'Join my Popcorn lobby',
         text: message
-      }).catch(err => {
+      }).catch(() => {
         // Fallback to SMS URL scheme
         window.open(`sms:?&body=${encodeURIComponent(message)}`);
       });
@@ -98,7 +97,7 @@ export default function MemberLobbyPage() {
       await navigator.clipboard.writeText(params.id as string);
       setCopyFeedback(true);
       setTimeout(() => setCopyFeedback(false), 2000);
-    } catch (err) {
+    } catch {
       // Fallback for browsers that don't support clipboard API
       const textArea = document.createElement('textarea');
       textArea.value = params.id as string;
