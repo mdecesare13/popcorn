@@ -2,9 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
-import { Progress } from '@/components/ui/progress';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
 
 // Types
 interface Movie {
@@ -24,17 +21,6 @@ interface Vote {
   vote: 'yes' | 'no' | null;
 }
 
-interface PartyDetails {
-  party_id: string;
-  status: string;
-  current_suite: number;
-  participants: {
-    user_id: string;
-    name: string;
-    status: string;
-  }[];
-}
-
 export default function Suite3Page() {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -47,10 +33,7 @@ export default function Suite3Page() {
   const [isLoadingMovies, setIsLoadingMovies] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [submitProgress, setSubmitProgress] = useState(0);
-  const [partyDetails, setPartyDetails] = useState<PartyDetails | null>(null);
   const [isHost, setIsHost] = useState(false);
-  const [missingVotes, setMissingVotes] = useState<string[]>([]);
   const [isMounted, setIsMounted] = useState(false);
 
   // Add new state for animation
@@ -81,7 +64,6 @@ export default function Suite3Page() {
         }
 
         const partyData = await partyResponse.json();
-        setPartyDetails(partyData);
         const isHostUser = userId === partyData.participants[0]?.user_id;
         setIsHost(isHostUser);
         
@@ -97,7 +79,7 @@ export default function Suite3Page() {
             if (savedMovies) {
               const moviesData = JSON.parse(savedMovies);
               setMovies(moviesData);
-              setVotes(moviesData.map(movie => ({
+              setVotes(moviesData.map((movie: Movie) => ({
                 movie_id: movie.movie_id,
                 vote: null
               })));
@@ -146,8 +128,6 @@ export default function Suite3Page() {
           : vote
       )
     );
-    // Clear movie from missing votes when it gets a vote
-    setMissingVotes(prev => prev.filter(id => id !== movieId));
   };
 
   // Submit all votes
@@ -158,7 +138,6 @@ export default function Suite3Page() {
       .map(vote => vote.movie_id);
     
     if (missing.length > 0) {
-      setMissingVotes(missing);
       // Scroll to first missing vote
       const firstMissingElement = document.getElementById(`movie-${missing[0]}`);
       if (firstMissingElement) {
@@ -174,7 +153,6 @@ export default function Suite3Page() {
       // Submit each vote
       for (let i = 0; i < votes.length; i++) {
         const vote = votes[i];
-        setSubmitProgress((i / votes.length) * 100);
         
         const response = await fetch(
           `${process.env.NEXT_PUBLIC_API_BASE_URL}/party/${params.id}/vote`,

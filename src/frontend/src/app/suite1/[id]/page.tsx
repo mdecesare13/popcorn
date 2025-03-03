@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
-import { Checkbox, Button } from "@/components/ui";
+import { Checkbox } from "@/components/ui";
 import {
   Select,
   SelectContent,
@@ -18,22 +18,32 @@ const GENRES = [
 
 const DECADES = ["1970", "1980", "1990", "2000", "2010", "2020"];
 
+// Add interface for party details
+interface PartyDetails {
+  party_id: string;
+  status: string;
+  participants: {
+    user_id: string;
+    name: string;
+    status: string;
+  }[];
+}
+
 export default function Suite1Page() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
   const userId = searchParams.get('userId');
 
+  // Fix state types
+  const [partyDetails, setPartyDetails] = useState<PartyDetails | null>(null);
+  const [genrePreferences, setGenrePreferences] = useState<string[]>([]);
+  const [genreDealbreakers, setGenreDealbreakers] = useState<string[]>([]);
+  const [decadePreferences, setDecadePreferences] = useState<string[]>([]);
+  const [yearCutoff, setYearCutoff] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [partyDetails, setPartyDetails] = useState(null);
-
-  // Form state
-  const [genrePreferences, setGenrePreferences] = useState([]);
-  const [genreDealbreakers, setGenreDealbreakers] = useState([]);
-  const [decadePreferences, setDecadePreferences] = useState([]);
-  const [yearCutoff, setYearCutoff] = useState('');
 
   // Fetch party details to determine if user is host
   useEffect(() => {
@@ -68,7 +78,8 @@ export default function Suite1Page() {
 
   const isHost = userId === partyDetails?.participants[0]?.user_id;
 
-  const handleGenrePreferenceChange = (genre) => {
+  // Fix handler types
+  const handleGenrePreferenceChange = (genre: string) => {
     setGenrePreferences(prev => {
       if (prev.includes(genre)) {
         return prev.filter(g => g !== genre);
@@ -80,7 +91,7 @@ export default function Suite1Page() {
     });
   };
 
-  const handleGenreDealbreakersChange = (genre) => {
+  const handleGenreDealbreakersChange = (genre: string) => {
     setGenreDealbreakers(prev => {
       if (prev.includes(genre)) {
         return prev.filter(g => g !== genre);
@@ -92,7 +103,7 @@ export default function Suite1Page() {
     });
   };
 
-  const handleDecadePreferenceChange = (decade) => {
+  const handleDecadePreferenceChange = (decade: string) => {
     setDecadePreferences(prev => {
       if (prev.includes(decade)) {
         return prev.filter(d => d !== decade);
@@ -227,10 +238,8 @@ export default function Suite1Page() {
                                genreDealbreakers.includes(genre)}
                       className="bg-white/10"
                       labelClass="text-white/90 font-light"
+                      label={genre}
                     />
-                    <label htmlFor={`pref-${genre}`} className="text-lg font-light">
-                      {genre}
-                    </label>
                   </div>
                 ))}
               </div>
@@ -258,10 +267,8 @@ export default function Suite1Page() {
                                genrePreferences.includes(genre)}
                       className="bg-white/10"
                       labelClass="text-white/90 font-light"
+                      label={genre}
                     />
-                    <label htmlFor={`deal-${genre}`} className="text-lg font-light">
-                      {genre}
-                    </label>
                   </div>
                 ))}
               </div>
@@ -287,10 +294,8 @@ export default function Suite1Page() {
                       disabled={decadePreferences.length >= 2 && !decadePreferences.includes(decade)}
                       className="bg-white/10"
                       labelClass="text-white/90 font-light"
+                      label={decade}
                     />
-                    <label htmlFor={`decade-${decade}`} className="text-lg font-light">
-                      {decade}s
-                    </label>
                   </div>
                 ))}
               </div>
@@ -299,7 +304,7 @@ export default function Suite1Page() {
             {/* Year Cutoff */}
             <section className="bg-white/5 backdrop-blur-sm rounded-2xl p-8">
               <h3 className="text-xl font-medium text-white/90 mb-6">
-                Oldest Movie You'd Watch
+                Oldest Movie You&apos;d Watch
               </h3>
               <div className="relative">
                 <Select value={yearCutoff} onValueChange={setYearCutoff}>

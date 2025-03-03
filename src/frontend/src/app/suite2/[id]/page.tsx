@@ -52,7 +52,6 @@ export default function Suite2Page() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [submitProgress, setSubmitProgress] = useState(0);
-  const [partyDetails, setPartyDetails] = useState<PartyDetails | null>(null);
   const [isHost, setIsHost] = useState(false);
   const [currentMovieIndex, setCurrentMovieIndex] = useState(0);
   const [selectedMovieForDetails, setSelectedMovieForDetails] = useState<Movie | null>(null);
@@ -77,7 +76,6 @@ export default function Suite2Page() {
         }
 
         const partyData = await partyResponse.json();
-        setPartyDetails(partyData);
         const isHostUser = userId === partyData.participants[0]?.user_id;
         setIsHost(isHostUser);
         
@@ -93,7 +91,7 @@ export default function Suite2Page() {
             if (savedMovies) {
               const moviesData = JSON.parse(savedMovies);
               setMovies(moviesData);
-              setRatings(moviesData.map(movie => ({
+              setRatings(moviesData.map((movie: Movie) => ({
                 movie_id: movie.movie_id,
                 rating: 5
               })));

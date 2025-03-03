@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, useSearchParams } from 'next/navigation';
-import BarChart from '@/components/ui/BarChart';
+import { useParams } from 'next/navigation';
 import MovieDetailsDialog from '@/components/ui/MovieDetailsDialog';
 
 // Types
@@ -27,19 +26,8 @@ interface MovieVotes {
   no_votes: number;
 }
 
-interface VoteResponse {
-  movie_id: string;
-  vote_counts: {
-    yes: string;
-    no: string;
-    total: string;
-  };
-}
-
 const FinalLobbyPage = () => {
   const params = useParams();
-  const searchParams = useSearchParams();
-  const userId = searchParams.get('userId');
 
   // State
   const [movies, setMovies] = useState<Movie[]>([]);
@@ -51,20 +39,30 @@ const FinalLobbyPage = () => {
 
   // Load movies from localStorage
   useEffect(() => {
-    const savedMovies = window.localStorage.getItem(`party_${params.id}_final_movies`);
-    if (savedMovies) {
-      const movieData = JSON.parse(savedMovies);
-      setMovies(movieData);
-      
-      // Initialize vote counts with 0s and include image_url
-      setVoteCounts(movieData.map(movie => ({
-        movie_id: movie.movie_id,
-        title: movie.title,
-        image_url: movie.image_url,  // Add this line
-        yes_votes: 0,
-        no_votes: 0
-      })));
-    }
+    const fetchMovies = async () => {
+      try {
+        const savedMovies = window.localStorage.getItem(`party_${params.id}_final_movies`);
+        if (savedMovies) {
+          const movieData: Movie[] = JSON.parse(savedMovies);
+          setMovies(movieData);
+          
+          // Initialize vote counts with proper typing
+          setVoteCounts(movieData.map((movie: Movie) => ({
+            movie_id: movie.movie_id,
+            title: movie.title,
+            image_url: movie.image_url,
+            yes_votes: 0,
+            no_votes: 0
+          })));
+        }
+      } catch (error) {
+        console.error('Error fetching movies:', error);
+        setError('Failed to fetch movies');
+        setIsLoading(false);
+      }
+    };
+
+    fetchMovies();
   }, [params.id]);
 
   // Poll for votes

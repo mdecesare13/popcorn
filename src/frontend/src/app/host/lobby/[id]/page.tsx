@@ -29,7 +29,7 @@ export default function HostLobbyPage() {
       await navigator.clipboard.writeText(params.id as string);
       setCopyFeedback(true);
       setTimeout(() => setCopyFeedback(false), 2000);
-    } catch (err) {
+    } catch (_) {
       // Fallback for browsers that don't support clipboard API
       const textArea = document.createElement('textarea');
       textArea.value = params.id as string;
@@ -125,17 +125,14 @@ export default function HostLobbyPage() {
   const handleInvite = () => {
     const message = `Join my Popcorn lobby and let's watch a movie!\nParty ID: ${params.id}\nhttp://localhost:3000/join`;
     
-    // Try using Web Share API first (works well on mobile)
     if (navigator.share) {
       navigator.share({
         title: 'Join my Popcorn lobby',
         text: message
-      }).catch(err => {
-        // Fallback to SMS URL scheme
+      }).catch(() => {
         window.open(`sms:?&body=${encodeURIComponent(message)}`);
       });
     } else {
-      // Fallback to SMS URL scheme for browsers without Web Share API
       window.open(`sms:?&body=${encodeURIComponent(message)}`);
     }
   };

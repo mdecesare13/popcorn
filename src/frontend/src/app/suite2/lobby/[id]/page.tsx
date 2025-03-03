@@ -224,9 +224,7 @@ export default function Suite2LobbyPage() {
               </div>
             ) : (
               <div className="text-center">
-                <p className="text-xl font-light text-white/50">
-                  Waiting for host to continue...
-                </p>
+                <p className="text-xl font-light text-white/50">Waiting for host to continue&hellip;</p>
               </div>
             )}
           </div>
@@ -264,7 +262,7 @@ export default function Suite2LobbyPage() {
               Taking Longer Than Expected
             </AlertDialogTitle>
             <AlertDialogDescription className="text-lg font-light text-white/70">
-              We're having trouble finding your movies. Please try again.
+              We&apos;re having trouble finding your movies. Please try again.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
