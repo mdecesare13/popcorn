@@ -75,19 +75,17 @@ export default function MemberLobbyPage() {
   }, [params.id, userId, router]);
 
   const handleInvite = () => {
-    const message = `Join my Popcorn lobby and let's watch a movie!\nParty ID: ${params.id}\nhttp://localhost:3000/join`;
-    
-    // Try using Web Share API first (works well on mobile)
     if (navigator.share) {
       navigator.share({
         title: 'Join my Popcorn lobby',
-        text: message
+        text: "Let's pick a movie!",
+        url: `https://popcorn-sand.vercel.app/join/${params.id}`
       }).catch(() => {
-        // Fallback to SMS URL scheme
+        const message = `Join my Popcorn lobby and let's pick a movie!\nhttps://popcorn-sand.vercel.app/join/${params.id}`;
         window.open(`sms:?&body=${encodeURIComponent(message)}`);
       });
     } else {
-      // Fallback to SMS URL scheme for browsers without Web Share API
+      const message = `Join my Popcorn lobby and let's pick a movie!\nhttps://popcorn-sand.vercel.app/join/${params.id}`;
       window.open(`sms:?&body=${encodeURIComponent(message)}`);
     }
   };

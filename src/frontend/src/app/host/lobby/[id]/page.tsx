@@ -23,6 +23,7 @@ export default function HostLobbyPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isStarting, setIsStarting] = useState(false);
   const [copyFeedback, setCopyFeedback] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   const handleCopyId = async () => {
     try {
@@ -92,6 +93,11 @@ export default function HostLobbyPage() {
   }, [params.id, router]);
 
   const handleStart = async () => {
+    setShowConfirmDialog(true);
+  };
+
+  const handleConfirmStart = async () => {
+    setShowConfirmDialog(false);
     setIsStarting(true);
     setError('');
 
@@ -123,16 +129,17 @@ export default function HostLobbyPage() {
   };
 
   const handleInvite = () => {
-    const message = `Join my Popcorn lobby and let's watch a movie!\nParty ID: ${params.id}\nhttp://localhost:3000/join`;
-    
     if (navigator.share) {
       navigator.share({
         title: 'Join my Popcorn lobby',
-        text: message
+        text: "Let's pick a movie!",
+        url: `https://popcorn-sand.vercel.app/join/${params.id}`
       }).catch(() => {
+        const message = `Join my Popcorn lobby and let's pick a movie!\nhttps://popcorn-sand.vercel.app/join/${params.id}`;
         window.open(`sms:?&body=${encodeURIComponent(message)}`);
       });
     } else {
+      const message = `Join my Popcorn lobby and let's pick a movie!\nhttps://popcorn-sand.vercel.app/join/${params.id}`;
       window.open(`sms:?&body=${encodeURIComponent(message)}`);
     }
   };
@@ -244,6 +251,36 @@ export default function HostLobbyPage() {
           </div>
         </div>
       </div>
+
+      {/* Confirmation Dialog */}
+      {showConfirmDialog && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 max-w-md w-full mx-4 shadow-xl">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-2xl">⚠️</span>
+              <h3 className="text-2xl font-medium text-white">Are you sure?</h3>
+            </div>
+            <p className="text-gray-300 mb-8">
+              Once you start no one else can join.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <button
+                onClick={handleConfirmStart}
+                className="flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 
+                         text-white hover:from-blue-700 hover:to-blue-600 transition-all duration-300"
+              >
+                Continue
+              </button>
+              <button
+                onClick={() => setShowConfirmDialog(false)}
+                className="flex-1 px-6 py-3 rounded-xl bg-gray-800 text-white hover:bg-gray-700 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
