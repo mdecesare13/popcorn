@@ -96,22 +96,9 @@ export default function Suite2Page() {
         // Get movies from localStorage with retry for non-hosts
         const getMoviesWithRetry = async (retries = 3, delay = 2000) => {
           for (let i = 0; i < retries; i++) {
-            const savedMovies = window.localStorage.getItem(`party_${params.id}_movies`);
-            if (savedMovies) {
-              const moviesData = JSON.parse(savedMovies);
-              setMovies(moviesData);
-              setRatings(moviesData.map((movie: Movie) => ({
-                movie_id: movie.movie_id,
-                rating: 5
-              })));
-              setIsLoadingMovies(false);
-              return true;
-            }
-
-            // If no movies in localStorage, try fetching them
             try {
-              const moviesResponse = await fetch(
-                `${process.env.NEXT_PUBLIC_API_BASE_URL}/party/${params.id}/suite2movies`,
+              const response = await fetch(
+                `${process.env.NEXT_PUBLIC_API_BASE_URL}/party/${params.id}`,
                 {
                   method: 'GET',
                   headers: {
@@ -120,19 +107,20 @@ export default function Suite2Page() {
                 }
               );
 
-              if (moviesResponse.ok) {
-                const moviesData = await moviesResponse.json();
-                window.localStorage.setItem(`party_${params.id}_movies`, JSON.stringify(moviesData.movies));
-                setMovies(moviesData.movies);
-                setRatings(moviesData.movies.map((movie: Movie) => ({
-                  movie_id: movie.movie_id,
-                  rating: 5
-                })));
-                setIsLoadingMovies(false);
-                return true;
+              if (response.ok) {
+                const partyData = await response.json();
+                if (partyData.movies_suite2) {
+                  setMovies(partyData.movies_suite2);
+                  setRatings(partyData.movies_suite2.map((movie: Movie) => ({
+                    movie_id: movie.movie_id,
+                    rating: 5
+                  })));
+                  setIsLoadingMovies(false);
+                  return true;
+                }
               }
             } catch (error) {
-              console.error('Failed to fetch movies:', error);
+              console.error('Failed to fetch party details:', error);
             }
 
             if (i < retries - 1) {

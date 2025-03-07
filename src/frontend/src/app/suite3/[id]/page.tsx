@@ -75,22 +75,9 @@ export default function Suite3Page() {
         // Get movies from localStorage with retry for non-hosts
         const getMoviesWithRetry = async (retries = 3, delay = 2000) => {
           for (let i = 0; i < retries; i++) {
-            const savedMovies = window.localStorage.getItem(`party_${params.id}_suite3_movies`);
-            if (savedMovies) {
-              const moviesData = JSON.parse(savedMovies);
-              setMovies(moviesData);
-              setVotes(moviesData.map((movie: Movie) => ({
-                movie_id: movie.movie_id,
-                vote: null
-              })));
-              setIsLoadingMovies(false);
-              return true;
-            }
-
-            // If no movies in localStorage, try fetching them
             try {
-              const moviesResponse = await fetch(
-                `${process.env.NEXT_PUBLIC_API_BASE_URL}/party/${params.id}/suite3movies`,
+              const response = await fetch(
+                `${process.env.NEXT_PUBLIC_API_BASE_URL}/party/${params.id}`,
                 {
                   method: 'GET',
                   headers: {
@@ -99,19 +86,20 @@ export default function Suite3Page() {
                 }
               );
 
-              if (moviesResponse.ok) {
-                const moviesData = await moviesResponse.json();
-                window.localStorage.setItem(`party_${params.id}_suite3_movies`, JSON.stringify(moviesData.movies));
-                setMovies(moviesData.movies);
-                setVotes(moviesData.movies.map((movie: Movie) => ({
-                  movie_id: movie.movie_id,
-                  vote: null
-                })));
-                setIsLoadingMovies(false);
-                return true;
+              if (response.ok) {
+                const partyData = await response.json();
+                if (partyData.movies_suite3) {
+                  setMovies(partyData.movies_suite3);
+                  setVotes(partyData.movies_suite3.map((movie: Movie) => ({
+                    movie_id: movie.movie_id,
+                    vote: null
+                  })));
+                  setIsLoadingMovies(false);
+                  return true;
+                }
               }
             } catch (error) {
-              console.error('Failed to fetch movies:', error);
+              console.error('Failed to fetch party details:', error);
             }
 
             if (i < retries - 1) {
@@ -246,12 +234,6 @@ export default function Suite3Page() {
           throw new Error('Failed to update party status');
         }
       }
-
-      // Store the full movie information for the final page
-      window.localStorage.setItem(`party_${params.id}_final_movies`, JSON.stringify(movies));
-
-      // Clear suite3 specific storage
-      window.localStorage.removeItem(`party_${params.id}_suite3_movies`);
 
       // Add to handleSubmit before redirect
       await fetch(

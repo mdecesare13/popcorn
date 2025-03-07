@@ -41,20 +41,32 @@ const FinalLobbyPage = () => {
   useEffect(() => {
     const fetchMovies = async () => {
       try {
-        const savedMovies = window.localStorage.getItem(`party_${params.id}_final_movies`);
-        if (savedMovies) {
-          const movieData: Movie[] = JSON.parse(savedMovies);
-          setMovies(movieData);
-          
-          // Initialize vote counts with proper typing
-          setVoteCounts(movieData.map((movie: Movie) => ({
-            movie_id: movie.movie_id,
-            title: movie.title,
-            image_url: movie.image_url,
-            yes_votes: 0,
-            no_votes: 0
-          })));
+        const partyResponse = await fetch(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/party/${params.id}`,
+          {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+
+        if (!partyResponse.ok) {
+          throw new Error('Failed to fetch party details');
         }
+
+        const partyData = await partyResponse.json();
+        const movies = partyData.movies_suite3 || [];
+        setMovies(movies);
+        
+        // Initialize vote counts with proper typing
+        setVoteCounts(movies.map((movie: Movie) => ({
+          movie_id: movie.movie_id,
+          title: movie.title,
+          image_url: movie.image_url,
+          yes_votes: 0,
+          no_votes: 0
+        })));
       } catch (error) {
         console.error('Error fetching movies:', error);
         setError('Failed to fetch movies');

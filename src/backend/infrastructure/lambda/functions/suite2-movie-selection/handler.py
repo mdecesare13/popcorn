@@ -271,6 +271,22 @@ def select_movies_with_openai(movies: List[Dict[str, Any]], preferences: Dict[st
         logger.error(f"Error type: {type(e).__name__}")
         raise
 
+def decimal_default(obj):
+    if isinstance(obj, Decimal):
+        return int(obj) if obj % 1 == 0 else float(obj)
+    raise TypeError
+
+def convert_decimals(obj, to_float=True):
+    if isinstance(obj, dict):
+        return {k: convert_decimals(v, to_float) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_decimals(x, to_float) for x in obj]
+    elif isinstance(obj, Decimal):
+        return float(obj) if to_float else obj
+    elif isinstance(obj, float):
+        return obj if to_float else Decimal(str(obj))
+    return obj
+
 def lambda_handler(event, context):
     """
     Main Lambda handler for Suite 2 movie selection.
@@ -303,29 +319,70 @@ def lambda_handler(event, context):
         selected_movies = select_movies_with_openai(matching_movies, preferences, logger)
         logger.info(f"Successfully selected {len(selected_movies)} movies")
         
-        # Handle Decimal serialization
-        logger.info("Preparing response")
-        selected_movies = json.loads(json.dumps(selected_movies, default=str))
-        
-        logger.info("Successfully completed movie selection")
-        return {
-            'statusCode': 200,
-            'headers': {
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Credentials': True
-            },
-            'body': json.dumps({
-                'movies': selected_movies
+        # Add detailed logging of movie structure
+        logger.info("Movie structure:", {
+            'first_movie': {
+                'type': type(selected_movies[0]).__name__,
+                'keys': list(selected_movies[0].keys()),
+                'sample_values': {
+                    k: type(v).__name__ 
+                    for k, v in selected_movies[0].items()
+                }
+            } if selected_movies else None
+        })
+
+        try:
+            # Convert Decimals to floats for JSON serialization
+            selected_movies = convert_decimals(selected_movies, to_float=True)
+            selected_movies = json.loads(json.dumps(selected_movies))
+            
+            # Store selected movies in party data - convert floats back to Decimals
+            party_table = dynamodb.Table('popcorn-party-info')
+            party_response = party_table.get_item(Key={'party_id': party_id})
+            if 'Item' not in party_response:
+                raise Exception('Party not found')
+            
+            party = party_response['Item']
+            party['movies_suite2'] = convert_decimals(selected_movies, to_float=False)  # Convert to Decimals for DynamoDB
+            party_table.put_item(Item=party)
+
+            logger.info('Stored selected movies in party data', {
+                'party_id': party_id,
+                'num_movies': len(selected_movies)
             })
-        }
+
+            logger.info("Successfully completed movie selection")
+            return {
+                'statusCode': 200,
+                'headers': {
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'GET,OPTIONS',
+                    'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'
+                },
+                'body': json.dumps({
+                    'movies': selected_movies
+                }, default=decimal_default)
+            }
+            
+        except Exception as e:
+            logger.error("Failed to serialize movies", {
+                'error': str(e),
+                'selected_movies': str(selected_movies)
+            })
+            raise
         
     except Exception as e:
         logger.error(f"Error processing request: {str(e)}")
         logger.error(f"Error type: {type(e).__name__}")
         return {
             'statusCode': 500,
+            'headers': {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET,OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'
+            },
             'body': json.dumps({
                 'error': str(e),
                 'message': 'Error processing request'
-            })
+            }, default=decimal_default)
         }

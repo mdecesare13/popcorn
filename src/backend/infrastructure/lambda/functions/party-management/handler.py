@@ -234,18 +234,27 @@ def get_party_status(event, context):
             })
             party['real_time_status'] = redis_status
             
+        # In get_party_status:
+        response_data = {
+            'party_id': party_id,
+            'status': party['status'],
+            'current_suite': party['current_suite'],
+            'participants': party['participants']
+        }
+
+        # Add movies if they exist
+        if 'movies_suite2' in party:
+            response_data['movies_suite2'] = party['movies_suite2']
+        if 'movies_suite3' in party:
+            response_data['movies_suite3'] = party['movies_suite3']
+
         return {
             'statusCode': 200,
             'headers': {
                 'Access-Control-Allow-Origin': '*',
                 'Access-Control-Allow-Credentials': True
             },
-            'body': json.dumps({
-                'party_id': party_id,
-                'status': party['status'],
-                'current_suite': party['current_suite'],
-                'participants': party['participants']
-            }, default=decimal_default)
+            'body': json.dumps(response_data, default=decimal_default)
         }
         
     except Exception as e:

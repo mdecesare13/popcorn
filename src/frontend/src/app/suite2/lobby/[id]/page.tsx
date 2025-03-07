@@ -148,7 +148,7 @@ export default function Suite2LobbyPage() {
     setError('');
 
     try {
-      // First fetch movies
+      // First fetch movies - this will also store them in party data
       const moviesResponse = await fetch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/party/${params.id}/suite2movies`,
         {
@@ -163,10 +163,7 @@ export default function Suite2LobbyPage() {
         throw new Error('Failed to fetch movies');
       }
 
-      const moviesData = await moviesResponse.json();
-      window.localStorage.setItem(`party_${params.id}_movies`, JSON.stringify(moviesData.movies));
-
-      // Then update party status
+      // Then update party status to trigger redirects
       setIsUpdating(true);
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/party/${params.id}/update`,
@@ -186,7 +183,7 @@ export default function Suite2LobbyPage() {
         throw new Error('Failed to update party status');
       }
 
-      // Redirect will happen through the polling effect
+      // Redirect will happen through polling
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to continue to next suite');
       setIsLoadingMovies(false);
