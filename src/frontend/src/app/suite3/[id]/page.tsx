@@ -109,6 +109,29 @@ export default function Suite3Page() {
           }
         }
         
+        // Add to initial useEffect after party validation
+        if (partyData.status === 'active' && partyData.current_suite === 3) {
+          // Update user progress to show they've started Suite 3
+          await fetch(
+            `${process.env.NEXT_PUBLIC_API_BASE_URL}/party/${params.id}/update`,
+            {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                user_id: userId,
+                progress: {
+                  status: 'in_suite_3',
+                  current_suite: 3,
+                  completed_suites: ['suite_1', 'suite_2'],
+                  last_updated: new Date().toISOString()
+                }
+              })
+            }
+          );
+        }
+        
       } catch (error) {
         setError(error instanceof Error ? error.message : 'An error occurred');
       } finally {
@@ -201,6 +224,26 @@ export default function Suite3Page() {
 
       // Clear suite3 specific storage
       window.localStorage.removeItem(`party_${params.id}_suite3_movies`);
+
+      // Add to handleSubmit before redirect
+      await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/party/${params.id}/update`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            user_id: userId,
+            progress: {
+              status: 'completed_suite_3',
+              current_suite: 3,
+              completed_suites: ['suite_1', 'suite_2', 'suite_3'],
+              last_updated: new Date().toISOString()
+            }
+          })
+        }
+      );
 
       // Redirect to final lobby
       router.push(`/final/lobby/${params.id}?userId=${userId}`);

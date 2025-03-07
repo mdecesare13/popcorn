@@ -66,6 +66,27 @@ export default function Suite1Page() {
         const data = await response.json();
         setPartyDetails(data);
         setError('');
+
+        if (data.status === 'active' && data.current_suite === 1) {
+          // Update user progress to show they've started Suite 1
+          await fetch(
+            `${process.env.NEXT_PUBLIC_API_BASE_URL}/party/${params.id}/update`,
+            {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                user_id: userId,
+                progress: {
+                  status: 'in_suite_1',
+                  current_suite: 1,
+                  last_updated: new Date().toISOString()
+                }
+              })
+            }
+          );
+        }
       } catch (error) {
         setError(error instanceof Error ? error.message : 'An error occurred');
       } finally {
@@ -180,6 +201,26 @@ export default function Suite1Page() {
           throw new Error('Failed to update party status');
         }
       }
+
+      // Update user progress to completed Suite 1
+      await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/party/${params.id}/update`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            user_id: userId,
+            progress: {
+              status: 'completed_suite_1',
+              current_suite: 1,
+              completed_suites: ['suite_1'],
+              last_updated: new Date().toISOString()
+            }
+          })
+        }
+      );
 
       // Redirect to Suite 2 lobby
       router.push(`/suite2/lobby/${params.id}?userId=${userId}`);

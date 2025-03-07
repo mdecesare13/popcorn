@@ -73,6 +73,26 @@ export default function Suite2Page() {
           return;
         }
 
+        // Update user progress to show they've started Suite 2
+        await fetch(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/party/${params.id}/update`,
+          {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              user_id: userId,
+              progress: {
+                status: 'in_suite_2',
+                current_suite: 2,
+                completed_suites: ['suite_1'],
+                last_updated: new Date().toISOString()
+              }
+            })
+          }
+        );
+
         // Get movies from localStorage with retry for non-hosts
         const getMoviesWithRetry = async (retries = 3, delay = 2000) => {
           for (let i = 0; i < retries; i++) {
@@ -181,6 +201,26 @@ export default function Suite2Page() {
           throw new Error('Failed to update party status');
         }
       }
+
+      // Update user progress to show they've completed Suite 2
+      await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/party/${params.id}/update`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            user_id: userId,
+            progress: {
+              status: 'completed_suite_2',
+              current_suite: 2,
+              completed_suites: ['suite_1', 'suite_2'],
+              last_updated: new Date().toISOString()
+            }
+          })
+        }
+      );
 
       // Clear movies from localStorage after successful submission
       window.localStorage.removeItem(`party_${params.id}_movies`);

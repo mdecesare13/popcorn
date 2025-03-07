@@ -17,6 +17,12 @@ interface Participant {
   name: string;
   user_id: string;
   status: string;
+  progress?: {
+    status: string;
+    current_suite: number;
+    completed_suites: string[];
+    last_updated: string;
+  };
 }
 
 interface PartyDetails {
@@ -39,6 +45,7 @@ export default function Suite3LobbyPage() {
   const [isLoadingMovies, setIsLoadingMovies] = useState(false);
   const [showTimeout, setShowTimeout] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   
   const isHost = partyDetails?.participants[0]?.user_id === userId;
 
@@ -122,9 +129,23 @@ export default function Suite3LobbyPage() {
     return () => clearInterval(pollInterval);
   }, [params.id, userId, router]);
 
-  const handleContinue = async () => {
+  const handleContinue = () => {
     if (!isHost) return;
     
+    // Check if any participants haven't completed the previous phase
+    const hasIncomplete = partyDetails?.participants.some(p => 
+      !p.progress || p.progress.status !== "completed_suite_2"
+    );
+
+    if (hasIncomplete) {
+      setShowConfirmDialog(true);
+    } else {
+      handleConfirmContinue();
+    }
+  };
+
+  const handleConfirmContinue = async () => {
+    setShowConfirmDialog(false);
     setIsLoadingMovies(true);
     setLoadingProgress(0);
     setError('');
@@ -180,6 +201,34 @@ export default function Suite3LobbyPage() {
     window.location.reload();
   };
 
+  // Add getParticipantStatus function
+  const getParticipantStatus = (participant: Participant) => {
+    if (!participant.progress) {
+      return {
+        icon: "⏳",
+        text: "Not Started",
+        color: "text-yellow-400/90",
+        bgColor: "bg-yellow-500/10"
+      };
+    }
+
+    if (participant.progress.status === "completed_suite_2") {
+      return {
+        icon: "✅",
+        text: "Ready",
+        color: "text-green-400/90",
+        bgColor: "bg-green-500/10"
+      };
+    }
+
+    return {
+      icon: "⏳",
+      text: "In Progress",
+      color: "text-red-400/90",
+      bgColor: "bg-red-500/10"
+    };
+  };
+
   return (
     <main className="relative min-h-screen w-full overflow-hidden font-['SF_Pro_Display',-apple-system,BlinkMacSystemFont,'Segoe_UI',Roboto,sans-serif]">
       {/* Background Image with Overlay */}
@@ -200,10 +249,43 @@ export default function Suite3LobbyPage() {
                 Popcorn
               </h1>
               <h2 className="text-2xl font-light text-white/70 mb-2">
-                Phase 2 Complete!
+                Waiting for Final Phase
               </h2>
               <div className="text-lg font-light text-white/50">
                 Party ID: {params.id}
+              </div>
+            </div>
+
+            {/* Members List section */}
+            <div className="mb-16">
+              <h2 className="text-2xl font-medium text-white/90 text-center mb-8">
+                Participants
+              </h2>
+              <div className="space-y-4 max-w-lg mx-auto">
+                {partyDetails?.participants.map((participant, index) => {
+                  const status = getParticipantStatus(participant);
+                  return (
+                    <div 
+                      key={participant.user_id} 
+                      className="flex items-center space-x-4 text-xl text-white/80 bg-white/5 backdrop-blur-sm 
+                               rounded-xl p-4 transition-all duration-300 hover:bg-white/10"
+                    >
+                      <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center font-medium">
+                        {participant.name[0].toUpperCase()}
+                      </div>
+                      <span className="font-light flex-1">{participant.name}</span>
+                      <div className={`flex items-center gap-2 px-3 py-1 rounded-full ${status.bgColor} ${status.color}`}>
+                        <span className="text-base">{status.icon}</span>
+                        <span className="text-sm font-medium">{status.text}</span>
+                      </div>
+                      {index === 0 && (
+                        <span className="px-3 py-1 rounded-full bg-yellow-500/10 text-yellow-300/90 text-sm font-medium">
+                          Host
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
@@ -211,7 +293,7 @@ export default function Suite3LobbyPage() {
             {isHost ? (
               <div className="space-y-8 text-center">
                 <p className="text-xl font-light text-white/70">
-                  Wait for all members to complete their ratings before continuing.
+                  Wait for all members to complete Phase 2 before continuing.
                 </p>
                 <button
                   onClick={handleContinue}
@@ -219,7 +301,7 @@ export default function Suite3LobbyPage() {
                   className="px-12 py-4 bg-white/10 backdrop-blur-sm text-white text-lg font-light
                            rounded-xl hover:bg-white/20 transition-all duration-300 disabled:opacity-50"
                 >
-                  {isUpdating ? 'Continuing...' : 'Continue to Final Selection'}
+                  {isUpdating ? 'Continuing...' : 'Continue to Final Phase'}
                 </button>
               </div>
             ) : (
@@ -278,6 +360,36 @@ export default function Suite3LobbyPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Confirmation Dialog */}
+      {showConfirmDialog && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 max-w-md w-full mx-4 shadow-xl">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-2xl">⚠️</span>
+              <h3 className="text-2xl font-medium text-white">Are you sure?</h3>
+            </div>
+            <p className="text-gray-300 mb-8">
+              Some participants haven&apos;t completed Phase 2. Continuing now will leave them behind.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <button
+                onClick={handleConfirmContinue}
+                className="flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 
+                         text-white hover:from-blue-700 hover:to-blue-600 transition-all duration-300"
+              >
+                Continue Anyway
+              </button>
+              <button
+                onClick={() => setShowConfirmDialog(false)}
+                className="flex-1 px-6 py-3 rounded-xl bg-gray-800 text-white hover:bg-gray-700 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Loading State */}
       {isLoading && (
