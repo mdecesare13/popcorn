@@ -86,6 +86,34 @@ export default function Suite3Page() {
               setIsLoadingMovies(false);
               return true;
             }
+
+            // If no movies in localStorage, try fetching them
+            try {
+              const moviesResponse = await fetch(
+                `${process.env.NEXT_PUBLIC_API_BASE_URL}/party/${params.id}/suite3movies`,
+                {
+                  method: 'GET',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                }
+              );
+
+              if (moviesResponse.ok) {
+                const moviesData = await moviesResponse.json();
+                window.localStorage.setItem(`party_${params.id}_suite3_movies`, JSON.stringify(moviesData.movies));
+                setMovies(moviesData.movies);
+                setVotes(moviesData.movies.map((movie: Movie) => ({
+                  movie_id: movie.movie_id,
+                  vote: null
+                })));
+                setIsLoadingMovies(false);
+                return true;
+              }
+            } catch (error) {
+              console.error('Failed to fetch movies:', error);
+            }
+
             if (i < retries - 1) {
               await new Promise(resolve => setTimeout(resolve, delay));
             }

@@ -103,11 +103,8 @@ export default function Suite3LobbyPage() {
         const data = await response.json();
         setPartyDetails(data);
         
-        // Check if movies exist in localStorage
-        const savedMovies = window.localStorage.getItem(`party_${params.id}_suite3_movies`);
-        
-        // If status is active and current_suite is 3 and movies exist, redirect
-        if (data.status === 'active' && data.current_suite === 3 && savedMovies) {
+        // If status is active and current_suite is 3, redirect
+        if (data.status === 'active' && data.current_suite === 3) {
           router.push(`/suite3/${params.id}?userId=${userId}`);
         }
 
