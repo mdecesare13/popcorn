@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
+import SwipeableCard from '@/components/ui/SwipeableCard';
 
 // Types
 interface Movie {
@@ -16,11 +17,6 @@ interface Movie {
   }[];
 }
 
-interface Vote {
-  movie_id: string;
-  vote: 'yes' | 'no' | null;
-}
-
 export default function Suite3Page() {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -28,16 +24,15 @@ export default function Suite3Page() {
   const userId = searchParams.get('userId');
 
   const [movies, setMovies] = useState<Movie[]>([]);
-  const [votes, setVotes] = useState<Vote[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMovies, setIsLoadingMovies] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [isHost, setIsHost] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
-  // Add new state for animation
+  // Current movie index for the stack
   const [currentMovieIndex, setCurrentMovieIndex] = useState(0);
+  const [isVoting, setIsVoting] = useState(false);
 
   // Handle client-side mounting
   useEffect(() => {
@@ -90,10 +85,6 @@ export default function Suite3Page() {
                 const partyData = await response.json();
                 if (partyData.movies_suite3) {
                   setMovies(partyData.movies_suite3);
-                  setVotes(partyData.movies_suite3.map((movie: Movie) => ({
-                    movie_id: movie.movie_id,
-                    vote: null
-                  })));
                   setIsLoadingMovies(false);
                   return true;
                 }
@@ -158,62 +149,51 @@ export default function Suite3Page() {
     if (params.id && userId) validateAndSetup();
   }, [params.id, userId, router]);
 
-  // Handle vote change
-  const handleVoteChange = (movieId: string, newVote: 'yes' | 'no') => {
-    setVotes(prev => 
-      prev.map(vote => 
-        vote.movie_id === movieId 
-          ? { ...vote, vote: newVote } 
-          : vote
-      )
-    );
-  };
-
-  // Submit all votes
-  const handleSubmit = async () => {
-    // Check for missing votes and highlight them
-    const missing = votes
-      .filter(vote => vote.vote === null)
-      .map(vote => vote.movie_id);
+  // Handle vote submission for a single movie
+  const handleVote = async (movieId: string, vote: 'yes' | 'no') => {
+    if (isVoting) return;
     
-    if (missing.length > 0) {
-      // Scroll to first missing vote
-      const firstMissingElement = document.getElementById(`movie-${missing[0]}`);
-      if (firstMissingElement) {
-        firstMissingElement.scrollIntoView({ behavior: 'smooth' });
-      }
-      return;
-    }
-
-    setIsSubmitting(true);
-    setError('');
+    setIsVoting(true);
     
     try {
-      // Submit each vote
-      for (let i = 0; i < votes.length; i++) {
-        const vote = votes[i];
-        
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/party/${params.id}/vote`,
-          {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              party_id: params.id,
-              user_id: userId,
-              movie_id: vote.movie_id,
-              vote: vote.vote
-            })
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error(`Failed to submit vote ${i + 1}`);
+      // Submit vote to API
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/party/${params.id}/vote`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            party_id: params.id,
+            user_id: userId,
+            movie_id: movieId,
+            vote
+          })
         }
-      }
+      );
 
+      if (!response.ok) {
+        throw new Error('Failed to submit vote');
+      }
+      
+      // Move to next movie
+      if (currentMovieIndex < movies.length - 1) {
+        setCurrentMovieIndex(prev => prev + 1);
+      } else {
+        // All votes completed
+        await completeVoting();
+      }
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to submit vote');
+    } finally {
+      setIsVoting(false);
+    }
+  };
+
+  // Complete the voting process and redirect
+  const completeVoting = async () => {
+    try {
       // If host, update party status
       if (isHost) {
         const updateResponse = await fetch(
@@ -235,7 +215,7 @@ export default function Suite3Page() {
         }
       }
 
-      // Add to handleSubmit before redirect
+      // Update user progress
       await fetch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/party/${params.id}/update`,
         {
@@ -260,20 +240,6 @@ export default function Suite3Page() {
       
     } catch (error) {
       setError(error instanceof Error ? error.message : 'An error occurred');
-      setIsSubmitting(false);
-    }
-  };
-
-  // Navigation functions
-  const nextMovie = () => {
-    if (currentMovieIndex < movies.length - 1) {
-      setCurrentMovieIndex(prev => prev + 1);
-    }
-  };
-
-  const previousMovie = () => {
-    if (currentMovieIndex > 0) {
-      setCurrentMovieIndex(prev => prev - 1);
     }
   };
 
@@ -316,94 +282,40 @@ export default function Suite3Page() {
             Final Phase: Blind Vote
           </h2>
           <p className="text-lg font-light text-white/50">
-            Would you watch this movie?
+            Swipe right for movies you&apos;d watch, left for those you wouldn&apos;t
           </p>
         </div>
 
-        {/* Movie Carousel */}
-        <div className="w-full max-w-xl mx-auto mb-16 px-12">
-          {/* Navigation Arrows */}
-          <div className="relative flex items-center justify-center">
-            <button
-              onClick={previousMovie}
-              disabled={currentMovieIndex === 0}
-              className="absolute -left-12 z-10 p-2 text-white/70 hover:text-white disabled:opacity-30 transition-opacity"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-8 h-8">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-              </svg>
-            </button>
-
-            {/* Movie Card */}
-            <div className="w-full aspect-[2/3] rounded-2xl overflow-hidden shadow-2xl">
-              <div className="relative h-full">
-                {/* Blurred Movie Image */}
-                <div 
-                  className="absolute inset-0 blur-3xl"
-                  style={{
-                    backgroundImage: `url(${movies[currentMovieIndex]?.image_url})`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center'
-                  }}
+        {/* Movie Card Stack */}
+        <div className="w-full max-w-xl mx-auto mb-16 px-4 h-[70vh]">
+          <div className="relative w-full h-full">
+            {/* Stack of cards - render current and next card */}
+            {movies.map((movie, index) => {
+              // Only render current card and next card for performance
+              if (index < currentMovieIndex || index > currentMovieIndex + 1) return null;
+              
+              return (
+                <SwipeableCard
+                  key={movie.movie_id}
+                  movie={movie}
+                  onVote={handleVote}
+                  isActive={index === currentMovieIndex}
                 />
-                <div className="absolute inset-0 bg-black/60" />
-
-                {/* Content */}
-                <div className="relative h-full flex flex-col p-8">
-                  {/* Movie Info - Scrollable Area */}
-                  <div className="flex-1 overflow-y-auto mb-8">
-                    <p className="text-2xl font-medium text-white mb-2">
-                      {movies[currentMovieIndex]?.year}
-                    </p>
-                    <p className="text-lg font-light text-white/80 leading-relaxed line-clamp-[12]">
-                      {movies[currentMovieIndex]?.blind_summary}
-                    </p>
-
-                    {/* Ratings */}
-                    <div className="space-y-2 mt-4">
-                      {movies[currentMovieIndex]?.ratings.map((rating, i) => (
-                        <div key={i} className="flex justify-between items-center text-white/70">
-                          <span className="font-light truncate mr-4">{rating.source}</span>
-                          <span className="font-medium whitespace-nowrap">{rating.score}/{rating.max_score}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Vote Buttons - Fixed at Bottom */}
-                  <div className="flex gap-4 mt-auto">
-                    <button
-                      onClick={() => handleVoteChange(movies[currentMovieIndex].movie_id, 'no')}
-                      className={`flex-1 py-4 rounded-xl font-medium transition-all duration-300 
-                        ${votes[currentMovieIndex]?.vote === 'no' 
-                          ? 'bg-red-500 text-white' 
-                          : 'bg-white/10 text-white hover:bg-red-500/20'}`}
-                    >
-                      No
-                    </button>
-                    <button
-                      onClick={() => handleVoteChange(movies[currentMovieIndex].movie_id, 'yes')}
-                      className={`flex-1 py-4 rounded-xl font-medium transition-all duration-300 
-                        ${votes[currentMovieIndex]?.vote === 'yes' 
-                          ? 'bg-green-500 text-white' 
-                          : 'bg-white/10 text-white hover:bg-green-500/20'}`}
-                    >
-                      Yes
-                    </button>
+              );
+            })}
+            
+            {/* Show loading spinner when all cards are swiped */}
+            {currentMovieIndex >= movies.length && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="text-center">
+                  <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-white border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" role="status">
+                    <span className="!absolute !-m-px !h-px !w-px !overflow-hidden !whitespace-nowrap !border-0 !p-0 ![clip:rect(0,0,0,0)]">
+                      Loading...
+                    </span>
                   </div>
                 </div>
               </div>
-            </div>
-
-            <button
-              onClick={nextMovie}
-              disabled={currentMovieIndex === movies.length - 1}
-              className="absolute -right-12 z-10 p-2 text-white/70 hover:text-white disabled:opacity-30 transition-opacity"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-8 h-8">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-              </svg>
-            </button>
+            )}
           </div>
 
           {/* Progress Dots */}
@@ -412,21 +324,12 @@ export default function Suite3Page() {
               <div
                 key={index}
                 className={`w-2 h-2 rounded-full transition-colors duration-200 
-                  ${index === currentMovieIndex ? 'bg-white' : 'bg-white/30'}`}
+                  ${index === currentMovieIndex ? 'bg-white' : 
+                    index < currentMovieIndex ? 'bg-white/70' : 'bg-white/30'}`}
               />
             ))}
           </div>
         </div>
-
-        {/* Submit Button */}
-        <button
-          onClick={handleSubmit}
-          disabled={isSubmitting}
-          className="px-12 py-4 bg-white/10 backdrop-blur-sm text-white text-lg font-light
-                   rounded-xl hover:bg-white/20 transition-all duration-300 disabled:opacity-50"
-        >
-          {isSubmitting ? 'Submitting...' : 'Submit Votes'}
-        </button>
       </div>
     </main>
   );
