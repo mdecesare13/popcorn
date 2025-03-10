@@ -14,7 +14,8 @@ const GENRES = [
   { id: "Fantasy", icon: "✨" },
   { id: "Family", icon: "👨‍👩‍👧‍👦" },
   { id: "Science Fiction", icon: "🚀" },
-  { id: "Horror", icon: "👻" }
+  { id: "Horror", icon: "👻" },
+  { id: "Romance", icon: "💖" }
 ];
 
 // Decade data with context
