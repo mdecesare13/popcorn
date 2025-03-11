@@ -11,6 +11,10 @@ Users move through three distinct phases:
 
 The app uses AI to process group preferences and deliver personalized movie recommendations that satisfy the entire group.
 
+## Demo Video
+
+[![Popcorn App Demo](https://img.youtube.com/vi/YOUTUBE_VIDEO_ID/maxresdefault.jpg)](https://drive.google.com/file/d/1KTd4YgqAycdf6c6bqLga0VSMRA_UTE5v/view?usp=drive_link)
+
 ## Features
 
 - **Private viewing parties** - Create movie selection sessions with shareable links
