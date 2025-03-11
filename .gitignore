@@ -1,7 +1,48 @@
+# OS generated files
 .DS_Store
-*response.json
-*response*.json
+Thumbs.db
+.directory
+desktop.ini
+
+# Environment variables and secrets
 .env
 .env*.local
+.env.development
+.env.test
+.env.production
+
+# Dependencies
 node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Build outputs
 .next/
+out/
+dist/
+build/
+lambda-packages/
+
+# Debug and testing
+*response.json
+*response*.json
+coverage/
+.nyc_output/
+
+# IDE specific files
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+
+# Misc
+.vercel
+.serverless/
+.webpack/
+tmp/
+temp/
