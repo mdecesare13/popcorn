@@ -13,7 +13,7 @@ The app uses AI to process group preferences and deliver personalized movie reco
 
 ## Demo Video
 
-[![Popcorn App Demo](https://img.youtube.com/vi/YOUTUBE_VIDEO_ID/maxresdefault.jpg)](https://drive.google.com/file/d/1KTd4YgqAycdf6c6bqLga0VSMRA_UTE5v/view?usp=drive_link)
+[![Popcorn App Demo](https://img.youtube.com/vi/8y9ovh3xKgU/maxresdefault.jpg)](https://youtu.be/8y9ovh3xKgU)
 
 ## Features
 
