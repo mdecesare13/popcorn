@@ -2,9 +2,9 @@
 
 ## Overview
 
-Groups spend more time choosing what to watch than actually watching. Popcorn leverages AI recommendations to solve that.
+My first shot building a web att with Cursor & Claude 3.5 & 3.7 Sonnet.
 
-I built this using Cursor & Claude 3.5 & 3.7 Sonnet.
+Groups spend more time choosing what to watch than actually watching. Popcorn leverages AI recommendations to solve that.
 
 Users move through three distinct phases:
 1. **Initial preference collection** - Gather genre preferences, dealbreakers, and year/decade preferences
