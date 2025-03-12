@@ -223,8 +223,8 @@ def select_movies_with_openai(movies: List[Dict[str, Any]], preferences: Dict[st
         And these movie options:
         {movie_choices}
 
-        Select exactly 5 movies that best match the preferences. Only select from the provided movies. You must ONLY select IDs that appear exactly as shown in the list above (the number after 'ID:'). Do not modify or generate new IDs.
-        Respond with a JSON array of exactly 5 movie IDs (only the number after 'ID:').
+        Select exactly 5 movies that best match the preferences. Only select from the provided movies. You must ONLY select IDs that appear exactly as shown in the list above (the number after 'ID:'). Do not modify or generate new IDs. Do not select any animated movies, and do not select two movies from the same franchise.
+        Respond with a JSON array of exactly 5 movie IDs (only the number after 'ID:'). If you cannot find 5 movies that match the preferences, return the best you can find. Do not return less than 3.
 
         Example response format:
         {{

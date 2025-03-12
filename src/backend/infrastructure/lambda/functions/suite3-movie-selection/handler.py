@@ -243,8 +243,9 @@ def select_movies_with_openai(movies: List[Dict[str, Any]],
         Select exactly 5 movies that best match the preferences and previous ratings.
         Heavily weight your selection toward genres that received high ratings.
         Only select from the provided movies using their exact IDs.
+        Do not select any animated movies, and do not select two movies from the same franchise.
         
-        For each selected movie, provide a plot summary that doesn't reveal the movie title.
+        For each selected movie, provide a plot summary that doesn't reveal the movie title. Do not make a mistake and provide a plot summary for a movie different than the one you select. This is unacceptable.
         
         Respond with a JSON object containing:
         1. selected_movies: array of objects with movie_id and blind_summary
