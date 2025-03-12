@@ -2,14 +2,14 @@
 
 ## Overview
 
-Popcorn is a web application designed to solve the age-old problem of groups spending more time choosing what to watch than actually watching. The app helps friends collectively decide on a movie to watch through a structured, multi-phase voting system enhanced by AI recommendations.
+Groups spend more time choosing what to watch than actually watching. Popcorn leverages AI recommendations to solve that.
+
+I built this using Cursor & Claude 3.5 & 3.7 Sonnet.
 
 Users move through three distinct phases:
 1. **Initial preference collection** - Gather genre preferences, dealbreakers, and year/decade preferences
 2. **Individual movie rating** - Rate suggested movies on a 1-10 scale
 3. **Blind movie voting** - Vote yes/no on movies without seeing titles (only plot summaries)
-
-The app uses AI to process group preferences and deliver personalized movie recommendations that satisfy the entire group.
 
 ## Demo Video
 
@@ -21,7 +21,6 @@ The app uses AI to process group preferences and deliver personalized movie reco
 - **Streaming service filtering** - Only suggest movies available on your subscribed platforms
 - **Preference reconciliation** - Balances diverse preferences to find movies everyone will enjoy
 - **Blind voting** - Helps eliminate bias based on actors, directors, or titles
-- **Deadlock prevention** - Built-in tie-breaking and "already seen" handling
 - **AI-powered recommendations** - Leverages AI to suggest movies matching group preferences
 
 ## Tech Stack
@@ -77,6 +76,12 @@ All infrastructure is defined as code using CloudFormation templates:
 
 ### 2. Data Storage
 
+**Movie Data Fetching:**
+Movie data is sourced from external APIs and processed in Databricks:
+- ETL process fetches movie data
+- Delta Lake tables store standardized movie information
+- DynamoDB sync process updates movie data
+
 **DynamoDB Tables:**
 - `popcorn-party-info` - Party/session management with host details
 - `popcorn-user-preferences` - User preferences from phases 1 & 2
@@ -96,13 +101,6 @@ Core functions handling business logic:
 - **Rating System** - Process and store user ratings
 - **Vote Processing** - Handle final voting, determine winners
 - **OpenAI Integration** - Generate AI-powered recommendations
-
-### 4. Movie Data Pipeline
-
-Movie data is sourced from external APIs and processed in Databricks:
-- ETL process fetches movie data
-- Delta Lake tables store standardized movie information
-- DynamoDB sync process updates movie data
 
 ## API Documentation
 
@@ -154,7 +152,6 @@ The UI is composed of reusable components:
 
 - **React Query** - Handles API requests, caching, and synchronization
 - **React Context** - Manages global application state
-- **Local Storage** - Persists user preferences and session information
 
 ### Responsive Design
 
