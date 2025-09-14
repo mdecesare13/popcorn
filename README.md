@@ -8,7 +8,7 @@
 
 ## Overview
 
-My first shot building a web att with Cursor & Claude 3.5 & 3.7 Sonnet.
+My first shot building a web app with Cursor & Claude 3.5 & 3.7 Sonnet.
 
 Groups spend more time choosing what to watch than actually watching. Popcorn leverages AI recommendations to solve that.
 
